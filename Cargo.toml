@@ -1,0 +1,17 @@
+[package]
+name = "dropzone"
+version = "1.0.0"
+edition = "2024"
+license = "GPL-3.0-or-later"
+description = "Temporary file sharing over the local network"
+repository = "https://github.com/dragonGR/dropzone"
+
+[dependencies]
+gtk4 = { version = "0.11", features = ["v4_16"] }
+libadwaita = { version = "0.9", features = ["v1_6"] }
+tokio = { version = "1.40", features = ["rt-multi-thread", "macros", "net", "io-util", "fs", "sync"] }
+axum = { version = "0.8", default-features = false, features = ["http1", "tokio"] }
+tokio-util = { version = "0.7", default-features = false, features = ["io"] }
+qrcode = { version = "0.14.1", default-features = false }
+if-addrs = "0.15"
+rand = "0.8"
