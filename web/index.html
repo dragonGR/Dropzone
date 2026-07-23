@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dropzone - Download</title>
+  <link rel="stylesheet" href="/s/{{TOKEN}}/style.css">
+  <meta http-equiv="refresh" content="1; url={{DOWNLOAD_URL}}">
+</head>
+<body>
+  <main class="card" role="region" aria-label="Shared File Download">
+    <header class="card-header">
+      <h1 class="brand-title">Dropzone</h1>
+    </header>
+
+    <section class="file-info">
+      <div class="file-icon" aria-hidden="true">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="12" y1="18" x2="12" y2="12"></line>
+          <polyline points="9 15 12 18 15 15"></polyline>
+        </svg>
+      </div>
+      <h2 class="filename" id="file-name">{{FILE_NAME}}</h2>
+      <p class="filesize" aria-label="File size">{{FILE_SIZE}}</p>
+    </section>
+
+    <div class="action-container">
+      <a href="{{DOWNLOAD_URL}}" id="download-btn" class="download-button" download aria-describedby="file-name">
+        Download
+      </a>
+      <p class="auto-download-notice">Your download will start automatically.</p>
+    </div>
+
+    <footer class="card-footer">
+      <p class="network-badge">Available on your local network</p>
+    </footer>
+  </main>
+
+  <script>
+    window.addEventListener('DOMContentLoaded', function() {
+      setTimeout(function() {
+        var btn = document.getElementById('download-btn');
+        if (btn) {
+          btn.click();
+        }
+      }, 250);
+    });
+  </script>
+</body>
+</html>
