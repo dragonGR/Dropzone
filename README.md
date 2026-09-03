@@ -1,53 +1,98 @@
+<div align="center">
+
+<img src="data/icons/hicolor/scalable/apps/io.github.dragonGR.Dropzone.svg" width="128" height="128" alt="Dropzone Logo" />
+
 # Dropzone
 
-Dropzone is a GNOME application for temporary file sharing over the local network.
+A GNOME application for quick, temporary file sharing over your local network.
 
-It starts an ephemeral HTTP server on an OS-assigned port, generates a cryptographically random capability URL, displays a local QR code and copyable link, and streams selected files directly to any receiving device with a web browser. The receiving device requires no installation or account.
+</div>
 
-When sharing is stopped, the server is torn down and the capability URL is invalidated immediately.
+Select a file, and Dropzone starts an ephemeral HTTP server on your machine, generates a single-use capability URL, and presents a local vector QR code. Any device on the same local network (phone, tablet, or another computer) can scan the code and download the file directly in a web browser. The receiving device needs no client app, account, or internet connection.
 
-## Requirements
+Once sharing is stopped, the server shuts down and the link is immediately invalidated.
 
-- Rust (stable toolchain)
-- GTK 4 (>= 4.16 recommended, 4.22+ supported)
-- Libadwaita (>= 1.6 recommended, 1.9+ supported)
+## Features
+
+- **No client installation**: Receivers only need a web browser.
+- **Local-only streaming**: Transfers stay on the local network without touching external servers.
+- **Constant memory usage**: Files are streamed through bounded buffers rather than loaded into RAM.
+- **Ephemeral access**: Cryptographically random capability tokens ensure URLs cannot be guessed and expire when sharing stops.
+- **GNOME native**: Built with GTK 4, Libadwaita, and vector Cairo QR rendering.
 
 ## Building and Running
 
-Build the application with Cargo:
+### With GNOME Builder (Recommended)
+
+1. Open **GNOME Builder**.
+2. Select **Open Project...** and choose this repository.
+3. Builder detects the Flatpak manifest (`build-aux/io.github.dragonGR.Dropzone.Devel.json`) and configures the GNOME 50 SDK environment automatically.
+4. Click **Run** (or press `Ctrl+Shift+Space`).
+
+### With Meson
 
 ```sh
-cargo build
+meson setup build
+ninja -C build
+ninja -C build test
+sudo ninja -C build install
 ```
 
-Run unit and integration tests:
+### With Cargo
 
 ```sh
+# Run tests
 cargo test
-```
 
-Run formatting and lint checks:
-
-```sh
+# Check formatting and lints
 cargo fmt --check
 cargo clippy --all-targets --all-features -- -D warnings
-```
 
-Run Dropzone locally:
-
-```sh
+# Run Dropzone
 cargo run
 ```
 
-## Architecture Overview
+## Translations
 
-- `src/share/`: Session capability tokens (256-bit CSPRNG), opaque file identifiers, and share lifecycle state.
-- `src/network/`: Local network interface discovery and candidate ranking (RFC 1918 private IPv4 selection, excluding loopback, link-local, and container bridges).
-- `src/server/`: Ephemeral Axum HTTP server, bounded-buffer file streaming (`tokio-util::io::ReaderStream`), RFC 6266 / RFC 5987 `Content-Disposition` header construction, and HTML escaping.
-- `src/qr/`: Local vector QR code rendering using Cairo directly into a GTK `DrawingArea`.
-- `src/window.rs`: Libadwaita application window with native `AdwStatusPage`, `AdwClamp`, `AdwToastOverlay`, and file chooser portal integration.
-- `web/`: Plain semantic HTML and CSS receiver page with no JavaScript or external assets.
+Dropzone is localized using GNU gettext. Translations are stored in the `po/` directory.
 
-## License
+To run Dropzone with a specific language (for example, Greek):
 
-Dropzone is licensed under the GNU General Public License v3.0 or later (GPL-3.0-or-later). See [LICENSE](LICENSE) for the full license text.
+```sh
+LANGUAGE=el cargo run
+```
+
+To update the translation template (`po/dropzone.pot`) after modifying user-facing strings:
+
+```sh
+ninja -C build dropzone-pot
+```
+
+## Firewall Configuration
+
+Dropzone binds to an OS-assigned ephemeral port on your LAN IP (for example, `http://192.168.1.42:43521/s/...`).
+
+If a phone or receiving device on the same local network cannot open the link or the connection times out, your host firewall is likely dropping incoming traffic on high unprivileged ports.
+
+### UFW (Uncomplicated Firewall)
+
+Allow connections from your local subnet:
+
+```sh
+sudo ufw allow from 192.168.1.0/24
+```
+
+Or allow traffic on your active wireless interface:
+
+```sh
+sudo ufw allow in on wlan0
+```
+
+### firewalld
+
+Add your local subnet to the trusted zone:
+
+```sh
+sudo firewall-cmd --add-source=192.168.1.0/24 --zone=trusted --permanent
+sudo firewall-cmd --reload
+```
