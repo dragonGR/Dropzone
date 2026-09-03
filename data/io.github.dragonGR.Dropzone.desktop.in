@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Dropzone
+Comment=Share files temporarily over the local network
+Exec=dropzone
+Icon=@APP_ID@
+Terminal=false
+Type=Application
+Categories=Network;FileTransfer;
+Keywords=share;transfer;lan;local;network;qr;drop;
+StartupNotify=true

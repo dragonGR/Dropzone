@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>@APP_ID@</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>Dropzone</name>
+  <summary>Temporary file sharing over the local network</summary>
+  <description>
+    <p>
+      Dropzone is a GNOME application for fast, temporary file sharing over the local network.
+    </p>
+    <p>
+      Select a file to start an ephemeral HTTP server and generate a cryptographically random capability URL with a QR code. Any device on the same local network can scan the QR code and download the file directly in a web browser without installing additional software or creating accounts.
+    </p>
+    <p>
+      Stopping sharing immediately stops the server and invalidates the link.
+    </p>
+  </description>
+  <launchable type="desktop-id">@APP_ID@.desktop</launchable>
+  <url type="homepage">https://github.com/dragonGR/dropzone</url>
+  <url type="bugtracker">https://github.com/dragonGR/dropzone/issues</url>
+  <url type="vcs-browser">https://github.com/dragonGR/dropzone</url>
+  <developer id="dev.debtman">
+    <name>dragonGR</name>
+  </developer>
+  <content_rating type="oars-1.1" />
+  <releases>
+    <release version="1.0.0" date="2026-09-04">
+      <description>
+        <p>Initial release with single-file sharing, Cairo vector QR code rendering, and ephemeral HTTP streaming.</p>
+      </description>
+    </release>
+  </releases>
+</component>
