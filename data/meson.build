@@ -24,6 +24,15 @@ if appstreamcli.found()
   test('Validate appstream file', appstreamcli, args: ['validate', '--no-net', appstream_file])
 endif
 
+icon_sizes = ['16x16', '24x24', '32x32', '48x48', '64x64', '128x128', '256x256', '512x512']
+
+foreach size : icon_sizes
+  install_data(
+    'icons' / 'hicolor' / size / 'apps' / (base_id + '.png'),
+    install_dir: get_option('datadir') / 'icons' / 'hicolor' / size / 'apps',
+  )
+endforeach
+
 install_data(
   'icons' / 'hicolor' / 'scalable' / 'apps' / (base_id + '.svg'),
   install_dir: get_option('datadir') / 'icons' / 'hicolor' / 'scalable' / 'apps',
