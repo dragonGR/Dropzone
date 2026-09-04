@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use crate::window::DropzoneWindow;
+use gtk4::gio;
 use gtk4::glib;
 use gtk4::prelude::*;
 use libadwaita as adw;
+use libadwaita::prelude::*;
 use std::sync::Arc;
 
 pub struct DropzoneApplication {
@@ -45,6 +47,56 @@ impl DropzoneApplication {
         let app = adw::Application::builder()
             .application_id("io.github.dragonGR.Dropzone")
             .build();
+
+        app.connect_startup(|_| {
+            let provider = gtk4::CssProvider::new();
+            provider.load_from_string(include_str!("style.css"));
+            if let Some(display) = gtk4::gdk::Display::default() {
+                gtk4::style_context_add_provider_for_display(
+                    &display,
+                    &provider,
+                    gtk4::STYLE_PROVIDER_PRIORITY_APPLICATION,
+                );
+            }
+        });
+
+        let color_scheme_action = gio::SimpleAction::new_stateful(
+            "color-scheme",
+            Some(glib::VariantTy::STRING),
+            &"default".to_variant(),
+        );
+        color_scheme_action.connect_activate(|action, parameter| {
+            if let Some(param) = parameter.and_then(|p| p.str()) {
+                action.set_state(&param.to_variant());
+                let style_manager = adw::StyleManager::default();
+                match param {
+                    "light" => style_manager.set_color_scheme(adw::ColorScheme::ForceLight),
+                    "dark" => style_manager.set_color_scheme(adw::ColorScheme::ForceDark),
+                    _ => style_manager.set_color_scheme(adw::ColorScheme::Default),
+                }
+            }
+        });
+        app.add_action(&color_scheme_action);
+
+        let app_clone = app.clone();
+        let about_action = gio::SimpleAction::new("about", None);
+        about_action.connect_activate(move |_, _| {
+            let active_window = app_clone.active_window();
+            let about = adw::AboutDialog::builder()
+                .application_name(gettextrs::gettext("Dropzone"))
+                .application_icon("io.github.dragonGR.Dropzone")
+                .developer_name("dragonGR")
+                .version("1.0.0")
+                .comments(gettextrs::gettext(
+                    "Temporary file sharing over the local network",
+                ))
+                .website("https://github.com/dragonGR/Dropzone")
+                .issue_url("https://github.com/dragonGR/Dropzone/issues")
+                .license_type(gtk4::License::Gpl30)
+                .build();
+            about.present(active_window.as_ref());
+        });
+        app.add_action(&about_action);
 
         let tokio_runtime = Arc::new(
             tokio::runtime::Builder::new_multi_thread()

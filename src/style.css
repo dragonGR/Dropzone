@@ -1,0 +1,115 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+
+/* Dropzone Brand Accent Palette (GNOME Blue 3, 4, 5) */
+@define-color accent_color #3584e4;
+@define-color accent_bg_color #3584e4;
+@define-color accent_fg_color #ffffff;
+
+/* Primary Action Button (Choose Files) */
+button.suggested-action {
+  background-color: #3584e4;
+  color: #ffffff;
+  border-radius: 9999px;
+  font-weight: 600;
+  padding: 10px 28px;
+  border: 1px solid rgba(28, 113, 216, 0.4);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  transition: background-color 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+}
+
+button.suggested-action:hover {
+  background-color: #1c71d8;
+  border-color: #1a5fb4;
+  box-shadow: 0 3px 8px rgba(28, 113, 216, 0.35);
+}
+
+button.suggested-action:active {
+  background-color: #1a5fb4;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+button.suggested-action:focus:focus-visible {
+  outline: 2px solid #62a0ea;
+  outline-offset: 2px;
+}
+
+/* Status Page Accent Icon */
+.dropzone-idle-page image.icon,
+.dropzone-idle-page image {
+  color: #3584e4;
+}
+
+/* Entry focus ring */
+entry:focus-within {
+  border-color: #3584e4;
+  outline-color: rgba(53, 132, 228, 0.4);
+}
+
+/* Dropzone Menu Popover */
+popover.dropzone-menu-popover > contents {
+  padding: 6px;
+  border-radius: 16px;
+  min-width: 250px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* Appearance Section Header */
+.caption-heading {
+  font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-start: 4px;
+}
+
+/* Theme Selector Cards */
+.theme-card {
+  border-radius: 12px;
+  padding: 10px 8px;
+  background-color: alpha(@theme_fg_color, 0.05);
+  border: 2px solid transparent;
+  transition: all 180ms cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.theme-card:hover {
+  background-color: alpha(@theme_fg_color, 0.09);
+}
+
+.theme-card:checked {
+  background-color: alpha(#3584e4, 0.14);
+  border-color: #3584e4;
+  box-shadow: 0 2px 8px rgba(53, 132, 228, 0.28);
+}
+
+.theme-card:checked .theme-label {
+  color: #3584e4;
+  font-weight: 700;
+}
+
+.theme-label {
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.theme-icon-system {
+  color: #3584e4;
+}
+
+.theme-icon-light {
+  color: #e5a50a;
+}
+
+.theme-icon-dark {
+  color: #62a0ea;
+}
+
+/* Menu Action Row */
+.menu-action-button {
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-weight: 500;
+}
+
+.menu-action-button:hover {
+  background-color: alpha(@theme_fg_color, 0.08);
+}

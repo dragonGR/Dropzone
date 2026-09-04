@@ -9,7 +9,10 @@ use dropzone::share::session::ShareSession;
 use gettextrs::gettext;
 use gtk4::glib;
 use gtk4::prelude::*;
-use gtk4::{Align, Box, Button, Entry, Label, Orientation, gio};
+use gtk4::{
+    Align, Box, Button, Entry, Image, Label, MenuButton, Orientation, Popover, Separator,
+    ToggleButton, gio,
+};
 use libadwaita as adw;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -31,6 +34,147 @@ pub struct DropzoneWindow {
 impl DropzoneWindow {
     pub fn new(app: &adw::Application, tokio_handle: tokio::runtime::Handle) -> Rc<Self> {
         let header_bar = adw::HeaderBar::new();
+
+        let popover = Popover::new();
+        popover.add_css_class("dropzone-menu-popover");
+
+        let popover_box = Box::new(Orientation::Vertical, 10);
+        popover_box.set_margin_start(10);
+        popover_box.set_margin_end(10);
+        popover_box.set_margin_top(10);
+        popover_box.set_margin_bottom(10);
+
+        let appearance_label = Label::builder()
+            .label(gettext("Appearance"))
+            .css_classes(["dim-label", "caption-heading"])
+            .halign(Align::Start)
+            .build();
+        popover_box.append(&appearance_label);
+
+        let theme_box = Box::new(Orientation::Horizontal, 6);
+        theme_box.set_homogeneous(true);
+
+        let btn_system = ToggleButton::builder()
+            .css_classes(["theme-card"])
+            .tooltip_text(gettext("System"))
+            .build();
+        let sys_box = Box::new(Orientation::Vertical, 4);
+        let sys_icon = Image::builder()
+            .icon_name("preferences-desktop-display-symbolic")
+            .pixel_size(20)
+            .css_classes(["theme-icon-system"])
+            .build();
+        let sys_label = Label::builder()
+            .label(gettext("System"))
+            .css_classes(["caption", "theme-label"])
+            .build();
+        sys_box.append(&sys_icon);
+        sys_box.append(&sys_label);
+        btn_system.set_child(Some(&sys_box));
+
+        let btn_light = ToggleButton::builder()
+            .css_classes(["theme-card"])
+            .tooltip_text(gettext("Light"))
+            .group(&btn_system)
+            .build();
+        let light_box = Box::new(Orientation::Vertical, 4);
+        let light_icon = Image::builder()
+            .icon_name("weather-clear-symbolic")
+            .pixel_size(20)
+            .css_classes(["theme-icon-light"])
+            .build();
+        let light_label = Label::builder()
+            .label(gettext("Light"))
+            .css_classes(["caption", "theme-label"])
+            .build();
+        light_box.append(&light_icon);
+        light_box.append(&light_label);
+        btn_light.set_child(Some(&light_box));
+
+        let btn_dark = ToggleButton::builder()
+            .css_classes(["theme-card"])
+            .tooltip_text(gettext("Dark"))
+            .group(&btn_system)
+            .build();
+        let dark_box = Box::new(Orientation::Vertical, 4);
+        let dark_icon = Image::builder()
+            .icon_name("weather-clear-night-symbolic")
+            .pixel_size(20)
+            .css_classes(["theme-icon-dark"])
+            .build();
+        let dark_label = Label::builder()
+            .label(gettext("Dark"))
+            .css_classes(["caption", "theme-label"])
+            .build();
+        dark_box.append(&dark_icon);
+        dark_box.append(&dark_label);
+        btn_dark.set_child(Some(&dark_box));
+
+        let style_manager = adw::StyleManager::default();
+        match style_manager.color_scheme() {
+            adw::ColorScheme::ForceLight => btn_light.set_active(true),
+            adw::ColorScheme::ForceDark => btn_dark.set_active(true),
+            _ => btn_system.set_active(true),
+        }
+
+        btn_system.connect_toggled(|btn| {
+            if btn.is_active() {
+                adw::StyleManager::default().set_color_scheme(adw::ColorScheme::Default);
+            }
+        });
+        btn_light.connect_toggled(|btn| {
+            if btn.is_active() {
+                adw::StyleManager::default().set_color_scheme(adw::ColorScheme::ForceLight);
+            }
+        });
+        btn_dark.connect_toggled(|btn| {
+            if btn.is_active() {
+                adw::StyleManager::default().set_color_scheme(adw::ColorScheme::ForceDark);
+            }
+        });
+
+        theme_box.append(&btn_system);
+        theme_box.append(&btn_light);
+        theme_box.append(&btn_dark);
+        popover_box.append(&theme_box);
+
+        let separator = Separator::new(Orientation::Horizontal);
+        popover_box.append(&separator);
+
+        let about_button = Button::builder()
+            .css_classes(["flat", "menu-action-button"])
+            .halign(Align::Fill)
+            .build();
+        let about_row = Box::new(Orientation::Horizontal, 10);
+        let about_icon = Image::from_icon_name("help-about-symbolic");
+        let about_text = Label::builder()
+            .label(gettext("About Dropzone"))
+            .halign(Align::Start)
+            .hexpand(true)
+            .build();
+        about_row.append(&about_icon);
+        about_row.append(&about_text);
+        about_button.set_child(Some(&about_row));
+
+        let popover_clone = popover.clone();
+        let app_clone = app.clone();
+        about_button.connect_clicked(move |_| {
+            popover_clone.popdown();
+            app_clone.activate_action("about", None);
+        });
+        popover_box.append(&about_button);
+
+        popover.set_child(Some(&popover_box));
+
+        let menu_button = MenuButton::builder()
+            .icon_name("open-menu-symbolic")
+            .popover(&popover)
+            .tooltip_text(gettext("Main Menu"))
+            .primary(true)
+            .accessible_role(gtk4::AccessibleRole::Button)
+            .build();
+        header_bar.pack_end(&menu_button);
+
         let view_stack = adw::ViewStack::new();
 
         let status_page = adw::StatusPage::builder()
@@ -38,10 +182,11 @@ impl DropzoneWindow {
             .title(gettext("Dropzone"))
             .description(gettext("Drop files here"))
             .build();
+        status_page.add_css_class("dropzone-idle-page");
 
         let choose_button = Button::builder()
             .label(gettext("Choose Files"))
-            .css_classes(["suggested-action", "pill"])
+            .css_classes(["suggested-action", "pill", "choose-button"])
             .halign(Align::Center)
             .valign(Align::Center)
             .tooltip_text(gettext("Select a file to share over the local network"))
