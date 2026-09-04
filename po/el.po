@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: dropzone 1.0.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-04 13:09+0300\n"
+"POT-Creation-Date: 2026-09-04 13:19+0300\n"
 "PO-Revision-Date: 2026-09-04 12:50+0300\n"
 "Last-Translator: dragonGR <alex@debtman.dev>\n"
 "Language-Team: Greek <gnome-el-list@gnome.org>\n"
@@ -19,7 +19,7 @@ msgstr ""
 
 #: data/io.github.dragonGR.Dropzone.desktop.in:2
 #: data/io.github.dragonGR.Dropzone.metainfo.xml.in:6 src/application.rs:86
-#: src/window.rs:59 src/window.rs:149
+#: src/window.rs:182 src/window.rs:272
 msgid "Dropzone"
 msgstr "Dropzone"
 
@@ -31,7 +31,7 @@ msgstr "Προσωρινή κοινή χρήση αρχείων στο τοπι�
 msgid "share;transfer;lan;local;network;qr;drop;"
 msgstr "κοινή χρήση;μεταφορά;τοπικό;δίκτυο;qr;απόθεση;lan;share;transfer;drop;"
 
-#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:7 src/application.rs:90
+#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:7 src/application.rs:91
 msgid "Temporary file sharing over the local network"
 msgstr "Προσωρινή κοινή χρήση αρχείων στο τοπικό δίκτυο"
 
@@ -74,91 +74,99 @@ msgstr ""
 "Αρχική έκδοση με κοινή χρήση αρχείου, απόδοση διανυσματικού κώδικα QR με "
 "Cairo και εφήμερη ροή HTTP."
 
-#: src/window.rs:37
-msgid "System"
-msgstr "Σύστημα"
-
-#: src/window.rs:38
-msgid "Light"
-msgstr "Φωτεινό"
-
-#: src/window.rs:39
-msgid "Dark"
-msgstr "Σκοτεινό"
-
-#: src/window.rs:40
+#: src/window.rs:48
 msgid "Appearance"
 msgstr "Εμφάνιση"
 
-#: src/window.rs:43
+#: src/window.rs:59 src/window.rs:68
+msgid "System"
+msgstr "Σύστημα"
+
+#: src/window.rs:77 src/window.rs:87
+msgid "Light"
+msgstr "Φωτεινό"
+
+#: src/window.rs:96 src/window.rs:106
+msgid "Dark"
+msgstr "Σκοτεινό"
+
+#: src/window.rs:151
 msgid "About Dropzone"
 msgstr "Σχετικά με το Dropzone"
 
-#: src/window.rs:49
+#: src/window.rs:172
 msgid "Main Menu"
 msgstr "Κύριο μενού"
 
-#: src/window.rs:60
+#: src/window.rs:183
 msgid "Drop files here"
 msgstr "Αποθέστε αρχεία εδώ"
 
-#: src/window.rs:65
+#: src/window.rs:188
 msgid "Choose Files"
 msgstr "Επιλογή αρχείων"
 
-#: src/window.rs:69
+#: src/window.rs:192
 msgid "Select a file to share over the local network"
 msgstr "Επιλέξτε ένα αρχείο για κοινή χρήση στο τοπικό δίκτυο"
 
-#: src/window.rs:105
+#: src/window.rs:228
 msgid "Temporary capability URL for downloading"
 msgstr "Προσωρινός σύνδεσμος για λήψη του αρχείου"
 
-#: src/window.rs:110 src/window.rs:113
+#: src/window.rs:233 src/window.rs:236
 msgid "Copy Link"
 msgstr "Αντιγραφή συνδέσμου"
 
-#: src/window.rs:120
+#: src/window.rs:243
 msgid "Stop Sharing"
 msgstr "Διακοπή κοινής χρήσης"
 
-#: src/window.rs:123
+#: src/window.rs:246
 msgid "Stop sharing and invalidate the download link"
 msgstr "Διακοπή κοινής χρήσης και άμεση ακύρωση του συνδέσμου λήψης"
 
-#: src/window.rs:206
+#: src/window.rs:321
+msgid "A sharing session is already active. Please stop it first."
+msgstr "Υπάρχει ήδη ενεργή κοινή χρήση. Παρακαλούμε διακόψτε την πρώτα."
+
+#: src/window.rs:340
+msgid "Directories cannot be shared directly. Please select a file."
+msgstr "Δεν υποστηρίζεται η κοινή χρήση φακέλων. Παρακαλούμε επιλέξτε ένα αρχείο."
+
+#: src/window.rs:387
 msgid "Link copied to clipboard"
 msgstr "Ο σύνδεσμος αντιγράφηκε στο πρόχειρο"
 
-#: src/window.rs:212
+#: src/window.rs:393
 msgid "Choose File to Share"
 msgstr "Επιλογή αρχείου για κοινή χρήση"
 
-#: src/window.rs:224
+#: src/window.rs:405
 msgid "File selection failed"
 msgstr "Η επιλογή αρχείου απέτυχε"
 
-#: src/window.rs:235
+#: src/window.rs:416
 msgid "Couldn’t resolve selected file path"
 msgstr "Αδυναμία εύρεσης της διαδρομής του επιλεγμένου αρχείου"
 
-#: src/window.rs:243
+#: src/window.rs:424
 msgid "Couldn’t read selected file"
 msgstr "Αδυναμία ανάγνωσης του επιλεγμένου αρχείου"
 
-#: src/window.rs:252
+#: src/window.rs:433
 msgid "Couldn’t start sharing: No local network connection available"
 msgstr ""
 "Αδυναμία έναρξης κοινής χρήσης: Δεν βρέθηκε ενεργή τοπική σύνδεση δικτύου"
 
-#: src/window.rs:270
+#: src/window.rs:451
 msgid "Couldn’t start local HTTP server"
 msgstr "Αδυναμία εκκίνησης του τοπικού διακομιστή HTTP"
 
-#: src/window.rs:273
+#: src/window.rs:454
 msgid "Server task was cancelled"
 msgstr "Η εργασία του διακομιστή ακυρώθηκε"
 
-#: src/window.rs:302
+#: src/window.rs:483
 msgid "Failed to render QR code"
 msgstr "Αποτυχία δημιουργίας κωδικού QR"

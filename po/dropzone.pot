@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: dropzone\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-04 13:09+0300\n"
+"POT-Creation-Date: 2026-09-04 13:19+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -19,7 +19,7 @@ msgstr ""
 
 #: data/io.github.dragonGR.Dropzone.desktop.in:2
 #: data/io.github.dragonGR.Dropzone.metainfo.xml.in:6 src/application.rs:86
-#: src/window.rs:59 src/window.rs:149
+#: src/window.rs:182 src/window.rs:272
 msgid "Dropzone"
 msgstr ""
 
@@ -31,7 +31,7 @@ msgstr ""
 msgid "share;transfer;lan;local;network;qr;drop;"
 msgstr ""
 
-#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:7 src/application.rs:90
+#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:7 src/application.rs:91
 msgid "Temporary file sharing over the local network"
 msgstr ""
 
@@ -63,90 +63,98 @@ msgid ""
 "and ephemeral HTTP streaming."
 msgstr ""
 
-#: src/window.rs:37
-msgid "System"
-msgstr ""
-
-#: src/window.rs:38
-msgid "Light"
-msgstr ""
-
-#: src/window.rs:39
-msgid "Dark"
-msgstr ""
-
-#: src/window.rs:40
+#: src/window.rs:48
 msgid "Appearance"
 msgstr ""
 
-#: src/window.rs:43
+#: src/window.rs:59 src/window.rs:68
+msgid "System"
+msgstr ""
+
+#: src/window.rs:77 src/window.rs:87
+msgid "Light"
+msgstr ""
+
+#: src/window.rs:96 src/window.rs:106
+msgid "Dark"
+msgstr ""
+
+#: src/window.rs:151
 msgid "About Dropzone"
 msgstr ""
 
-#: src/window.rs:49
+#: src/window.rs:172
 msgid "Main Menu"
 msgstr ""
 
-#: src/window.rs:60
+#: src/window.rs:183
 msgid "Drop files here"
 msgstr ""
 
-#: src/window.rs:65
+#: src/window.rs:188
 msgid "Choose Files"
 msgstr ""
 
-#: src/window.rs:69
+#: src/window.rs:192
 msgid "Select a file to share over the local network"
 msgstr ""
 
-#: src/window.rs:105
+#: src/window.rs:228
 msgid "Temporary capability URL for downloading"
 msgstr ""
 
-#: src/window.rs:110 src/window.rs:113
+#: src/window.rs:233 src/window.rs:236
 msgid "Copy Link"
 msgstr ""
 
-#: src/window.rs:120
+#: src/window.rs:243
 msgid "Stop Sharing"
 msgstr ""
 
-#: src/window.rs:123
+#: src/window.rs:246
 msgid "Stop sharing and invalidate the download link"
 msgstr ""
 
-#: src/window.rs:206
+#: src/window.rs:321
+msgid "A sharing session is already active. Please stop it first."
+msgstr ""
+
+#: src/window.rs:340
+msgid "Directories cannot be shared directly. Please select a file."
+msgstr ""
+
+#: src/window.rs:387
 msgid "Link copied to clipboard"
 msgstr ""
 
-#: src/window.rs:212
+#: src/window.rs:393
 msgid "Choose File to Share"
 msgstr ""
 
-#: src/window.rs:224
+#: src/window.rs:405
 msgid "File selection failed"
 msgstr ""
 
-#: src/window.rs:235
+#: src/window.rs:416
 msgid "Couldn’t resolve selected file path"
 msgstr ""
 
-#: src/window.rs:243
+#: src/window.rs:424
 msgid "Couldn’t read selected file"
 msgstr ""
 
-#: src/window.rs:252
+#: src/window.rs:433
 msgid "Couldn’t start sharing: No local network connection available"
 msgstr ""
 
-#: src/window.rs:270
+#: src/window.rs:451
 msgid "Couldn’t start local HTTP server"
 msgstr ""
 
-#: src/window.rs:273
+#: src/window.rs:454
 msgid "Server task was cancelled"
 msgstr ""
 
-#: src/window.rs:302
+#: src/window.rs:483
 msgid "Failed to render QR code"
 msgstr ""

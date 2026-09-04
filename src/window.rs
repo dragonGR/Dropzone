@@ -10,8 +10,8 @@ use gettextrs::gettext;
 use gtk4::glib;
 use gtk4::prelude::*;
 use gtk4::{
-    Align, Box, Button, Entry, Image, Label, MenuButton, Orientation, Popover, Separator,
-    ToggleButton, gio,
+    Align, Box, Button, DropTarget, Entry, Image, Label, MenuButton, Orientation, Popover,
+    Separator, ToggleButton, gdk, gio,
 };
 use libadwaita as adw;
 use std::cell::RefCell;
@@ -291,6 +291,62 @@ impl DropzoneWindow {
         choose_button.connect_clicked(move |_| {
             self_clone.on_choose_files_clicked();
         });
+
+        let drop_target = DropTarget::new(glib::Type::INVALID, gdk::DragAction::COPY);
+        drop_target.set_types(&[gdk::FileList::static_type(), gio::File::static_type()]);
+
+        let status_page_clone = status_page.clone();
+        let view_stack_clone = dropzone_window.view_stack.clone();
+        drop_target.connect_enter(move |_target, _x, _y| {
+            if view_stack_clone.visible_child_name().as_deref() == Some("idle") {
+                status_page_clone.add_css_class("drag-hover");
+                gdk::DragAction::COPY
+            } else {
+                gdk::DragAction::empty()
+            }
+        });
+
+        let status_page_clone = status_page.clone();
+        drop_target.connect_leave(move |_target| {
+            status_page_clone.remove_css_class("drag-hover");
+        });
+
+        let self_clone = Rc::clone(&dropzone_window);
+        let status_page_clone = status_page.clone();
+        drop_target.connect_drop(move |_target, value, _x, _y| -> bool {
+            status_page_clone.remove_css_class("drag-hover");
+
+            if self_clone.view_stack.visible_child_name().as_deref() != Some("idle") {
+                self_clone.show_toast(&gettext(
+                    "A sharing session is already active. Please stop it first.",
+                ));
+                return false;
+            }
+
+            let gio_file = if let Ok(file_list) = value.get::<gdk::FileList>() {
+                let files = file_list.files();
+                files.into_iter().next()
+            } else {
+                value.get::<gio::File>().ok()
+            };
+
+            if let Some(file) = gio_file {
+                if file.query_file_type(gio::FileQueryInfoFlags::NONE, gio::Cancellable::NONE)
+                    == gio::FileType::Directory
+                {
+                    self_clone.show_toast(&gettext(
+                        "Directories cannot be shared directly. Please select a file.",
+                    ));
+                    return false;
+                }
+                self_clone.on_file_selected(file);
+                true
+            } else {
+                false
+            }
+        });
+
+        dropzone_window.window.add_controller(drop_target);
 
         let self_clone = Rc::clone(&dropzone_window);
         copy_button.connect_clicked(move |_| {

@@ -33,10 +33,27 @@ button.suggested-action:focus:focus-visible {
   outline-offset: 2px;
 }
 
-/* Status Page Accent Icon */
+/* Status Page Accent Icon & Drag Hover State */
+.dropzone-idle-page {
+  transition: all 200ms ease;
+}
+
 .dropzone-idle-page image.icon,
 .dropzone-idle-page image {
   color: #3584e4;
+  transition: transform 200ms ease, color 200ms ease;
+}
+
+.dropzone-idle-page.drag-hover {
+  background-color: alpha(#3584e4, 0.08);
+  border: 2px dashed #3584e4;
+  border-radius: 16px;
+  margin: 12px;
+}
+
+.dropzone-idle-page.drag-hover image {
+  transform: scale(1.1);
+  color: #1c71d8;
 }
 
 /* Entry focus ring */
@@ -59,7 +76,7 @@ popover.dropzone-menu-popover > contents {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  margin-start: 4px;
+  margin-left: 4px;
 }
 
 /* Theme Selector Cards */
