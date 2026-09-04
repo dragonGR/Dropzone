@@ -88,7 +88,7 @@ body {
 }
 
 .action-container {
-  margin-bottom: 1.5rem;
+  margin-top: 0.5rem;
 }
 
 .download-button {
@@ -108,20 +108,4 @@ body {
 .download-button:focus {
   background-color: var(--accent-hover);
   outline: none;
-}
-
-.auto-download-notice {
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-  margin-top: 0.75rem;
-}
-
-.card-footer {
-  border-top: 1px solid var(--border-color);
-  padding-top: 1.25rem;
-}
-
-.network-badge {
-  font-size: 0.82rem;
-  color: var(--text-secondary);
 }

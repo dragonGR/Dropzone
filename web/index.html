@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dropzone - Download</title>
+  <title>Dropzone</title>
+  <link rel="icon" type="image/svg+xml" href="/s/{{TOKEN}}/icon.svg">
   <link rel="stylesheet" href="/s/{{TOKEN}}/style.css">
-  <meta http-equiv="refresh" content="1; url={{DOWNLOAD_URL}}">
 </head>
 <body>
   <main class="card" role="region" aria-label="Shared File Download">
@@ -27,26 +27,10 @@
     </section>
 
     <div class="action-container">
-      <a href="{{DOWNLOAD_URL}}" id="download-btn" class="download-button" download aria-describedby="file-name">
+      <a href="{{DOWNLOAD_URL}}" id="download-btn" class="download-button" aria-describedby="file-name">
         Download
       </a>
-      <p class="auto-download-notice">Your download will start automatically.</p>
     </div>
-
-    <footer class="card-footer">
-      <p class="network-badge">Available on your local network</p>
-    </footer>
   </main>
-
-  <script>
-    window.addEventListener('DOMContentLoaded', function() {
-      setTimeout(function() {
-        var btn = document.getElementById('download-btn');
-        if (btn) {
-          btn.click();
-        }
-      }, 250);
-    });
-  </script>
 </body>
 </html>

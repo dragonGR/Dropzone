@@ -17,6 +17,8 @@ use tokio_util::io::ReaderStream;
 
 const INDEX_HTML_TEMPLATE: &str = include_str!("../../web/index.html");
 const STYLE_CSS: &str = include_str!("../../web/style.css");
+const ICON_SVG: &str =
+    include_str!("../../data/icons/hicolor/scalable/apps/io.github.dragonGR.Dropzone.svg");
 
 /// Handler for the landing page: GET /s/{token}
 async fn landing_page(
@@ -52,6 +54,17 @@ async fn stylesheet(State(state): State<Arc<ServerState>>, Path(token): Path<Str
             STYLE_CSS,
         )
             .into_response(),
+        _ => StatusCode::NOT_FOUND.into_response(),
+    }
+}
+
+/// Handler for the favicon: GET /s/{token}/icon.svg or GET /s/{token}/favicon.ico
+async fn favicon(State(state): State<Arc<ServerState>>, Path(token): Path<String>) -> Response {
+    let guard = state.session.read().await;
+    match guard.as_ref() {
+        Some(s) if s.is_authorized(&token) => {
+            ([(header::CONTENT_TYPE, "image/svg+xml")], ICON_SVG).into_response()
+        }
         _ => StatusCode::NOT_FOUND.into_response(),
     }
 }
@@ -99,6 +112,8 @@ pub fn build_router(state: Arc<ServerState>) -> Router {
         .route("/s/{token}", get(landing_page))
         .route("/s/{token}/", get(landing_page))
         .route("/s/{token}/style.css", get(stylesheet))
+        .route("/s/{token}/icon.svg", get(favicon))
+        .route("/s/{token}/favicon.ico", get(favicon))
         .route("/s/{token}/files/{file_id}", get(download_file))
         .route("/s/{token}/files/{file_id}/", get(download_file))
         .with_state(state)

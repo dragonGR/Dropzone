@@ -31,8 +31,8 @@ async fn test_server_e2e_lifecycle_and_streaming() {
     assert_eq!(resp.status, 200);
     assert!(resp.body.contains("dropzone_test_stream.bin"));
     assert!(resp.body.contains("64.0 KB"));
-    assert!(resp.body.contains("http-equiv=\"refresh\""));
-    assert!(resp.body.contains("auto-download-notice"));
+    assert!(!resp.body.contains("http-equiv=\"refresh\""));
+    assert!(resp.body.contains("class=\"download-button\""));
     assert!(
         resp.body
             .contains(&format!("/s/{}/files/{}", token, file_id))
@@ -46,6 +46,11 @@ async fn test_server_e2e_lifecycle_and_streaming() {
     let resp = reqwest_get(&css_url).await;
     assert_eq!(resp.status, 200);
     assert!(resp.body.contains("--accent-color"));
+
+    let icon_url = format!("{}/s/{}/icon.svg", base_url, token);
+    let resp = reqwest_get(&icon_url).await;
+    assert_eq!(resp.status, 200);
+    assert!(resp.body.contains("<svg"));
 
     let download_url = format!("{}/s/{}/files/{}", base_url, token, file_id);
     let (status, downloaded_bytes, cd_header, content_type) = download_bytes(&download_url).await;
