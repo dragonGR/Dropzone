@@ -9,8 +9,13 @@ BUILDTYPE="$4"
 export CARGO_TARGET_DIR="$MESON_BUILD_ROOT/target"
 export CARGO_HOME="${CARGO_HOME:-$MESON_BUILD_ROOT/cargo-home}"
 
+if [ -f "$MESON_SOURCE_ROOT/cargo/config" ] && [ ! -f "$MESON_SOURCE_ROOT/.cargo/config.toml" ]; then
+    mkdir -p "$MESON_SOURCE_ROOT/.cargo"
+    cp "$MESON_SOURCE_ROOT/cargo/config" "$MESON_SOURCE_ROOT/.cargo/config.toml"
+fi
+
 CARGO_FLAGS=""
-if [ -f "$MESON_SOURCE_ROOT/cargo/config" ] || [ -f "$CARGO_HOME/config" ]; then
+if [ -f "$MESON_SOURCE_ROOT/.cargo/config.toml" ] || [ -f "$MESON_SOURCE_ROOT/cargo/config" ] || [ -f "$CARGO_HOME/config" ]; then
     CARGO_FLAGS="--offline"
 fi
 

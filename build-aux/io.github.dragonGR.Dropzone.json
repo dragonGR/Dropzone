@@ -29,7 +29,14 @@
           "type": "dir",
           "path": "../"
         },
-        "cargo-sources.json"
+        "cargo-sources.json",
+        {
+          "type": "shell",
+          "commands": [
+            "mkdir -p .cargo",
+            "cp cargo/config .cargo/config.toml"
+          ]
+        }
       ]
     }
   ]
