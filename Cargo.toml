@@ -2,9 +2,14 @@
 name = "dropzone"
 version = "1.0.0"
 edition = "2024"
+authors = ["dragonGR <alex@debtman.dev>"]
 license = "GPL-3.0-or-later"
 description = "Temporary file sharing over the local network"
+homepage = "https://github.com/dragonGR/dropzone"
 repository = "https://github.com/dragonGR/dropzone"
+readme = "README.md"
+keywords = ["gnome", "gtk4", "libadwaita", "file-sharing", "lan"]
+categories = ["network-programming"]
 
 [dependencies]
 gtk4 = { version = "0.11", features = ["v4_16"] }
@@ -15,3 +20,11 @@ tokio-util = { version = "0.7", default-features = false, features = ["io"] }
 qrcode = { version = "0.14.1", default-features = false }
 if-addrs = "0.15"
 rand = "0.8"
+gettext-rs = { version = "0.8", features = ["gettext-system"] }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

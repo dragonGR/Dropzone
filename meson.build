@@ -6,6 +6,7 @@ project(
 )
 
 gnome = import('gnome')
+i18n = import('i18n')
 
 base_id = 'io.github.dragonGR.Dropzone'
 
@@ -19,6 +20,7 @@ conf.set('PKGDATADIR', get_option('prefix') / get_option('datadir') / meson.proj
 dependency('gtk4', version: '>= 4.16')
 dependency('libadwaita-1', version: '>= 1.6')
 
+subdir('po')
 subdir('data')
 subdir('src')
 

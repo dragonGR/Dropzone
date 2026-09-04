@@ -6,6 +6,7 @@ use dropzone::server::routes::start_server;
 use dropzone::server::state::ServerHandle;
 use dropzone::share::files::SharedFile;
 use dropzone::share::session::ShareSession;
+use gettextrs::gettext;
 use gtk4::glib;
 use gtk4::prelude::*;
 use gtk4::{Align, Box, Button, Entry, Label, Orientation, gio};
@@ -34,16 +35,16 @@ impl DropzoneWindow {
 
         let status_page = adw::StatusPage::builder()
             .icon_name("document-send-symbolic")
-            .title("Dropzone")
-            .description("Drop files here")
+            .title(gettext("Dropzone"))
+            .description(gettext("Drop files here"))
             .build();
 
         let choose_button = Button::builder()
-            .label("Choose Files")
+            .label(gettext("Choose Files"))
             .css_classes(["suggested-action", "pill"])
             .halign(Align::Center)
             .valign(Align::Center)
-            .tooltip_text("Select a file to share over the local network")
+            .tooltip_text(gettext("Select a file to share over the local network"))
             .accessible_role(gtk4::AccessibleRole::Button)
             .build();
 
@@ -79,24 +80,25 @@ impl DropzoneWindow {
             .editable(false)
             .can_focus(true)
             .width_chars(28)
-            .tooltip_text("Temporary capability URL for downloading")
+            .tooltip_text(gettext("Temporary capability URL for downloading"))
             .build();
 
         let copy_button = Button::builder()
             .icon_name("edit-copy-symbolic")
-            .tooltip_text("Copy Link")
+            .tooltip_text(gettext("Copy Link"))
             .accessible_role(gtk4::AccessibleRole::Button)
             .build();
-        copy_button.update_property(&[gtk4::accessible::Property::Label("Copy Link")]);
+        let copy_label = gettext("Copy Link");
+        copy_button.update_property(&[gtk4::accessible::Property::Label(&copy_label)]);
 
         url_box.append(&url_entry);
         url_box.append(&copy_button);
 
         let stop_button = Button::builder()
-            .label("Stop Sharing")
+            .label(gettext("Stop Sharing"))
             .css_classes(["destructive-action", "pill"])
             .halign(Align::Center)
-            .tooltip_text("Stop sharing and invalidate the download link")
+            .tooltip_text(gettext("Stop sharing and invalidate the download link"))
             .accessible_role(gtk4::AccessibleRole::Button)
             .build();
 
@@ -122,7 +124,7 @@ impl DropzoneWindow {
 
         let window = adw::ApplicationWindow::builder()
             .application(app)
-            .title("Dropzone")
+            .title(gettext("Dropzone"))
             .default_width(400)
             .default_height(540)
             .content(&content_box)
@@ -179,13 +181,13 @@ impl DropzoneWindow {
             && let Some(display) = gtk4::gdk::Display::default()
         {
             display.clipboard().set_text(text.as_str());
-            self.show_toast("Link copied to clipboard");
+            self.show_toast(&gettext("Link copied to clipboard"));
         }
     }
 
     fn on_choose_files_clicked(&self) {
         let file_dialog = gtk4::FileDialog::new();
-        file_dialog.set_title("Choose File to Share");
+        file_dialog.set_title(&gettext("Choose File to Share"));
 
         let self_ref = self.clone_rc();
         file_dialog.open(
@@ -197,7 +199,7 @@ impl DropzoneWindow {
                 }
                 Err(err) => {
                     if err.kind::<gtk4::DialogError>() != Some(gtk4::DialogError::Dismissed) {
-                        self_ref.show_toast("File selection failed");
+                        self_ref.show_toast(&gettext("File selection failed"));
                     }
                 }
             },
@@ -208,7 +210,7 @@ impl DropzoneWindow {
         let path = match gio_file.path() {
             Some(p) => p,
             None => {
-                self.show_toast("Couldn’t resolve selected file path");
+                self.show_toast(&gettext("Couldn’t resolve selected file path"));
                 return;
             }
         };
@@ -216,7 +218,7 @@ impl DropzoneWindow {
         let shared_file = match SharedFile::from_path(path) {
             Ok(f) => f,
             Err(_) => {
-                self.show_toast("Couldn’t read selected file");
+                self.show_toast(&gettext("Couldn’t read selected file"));
                 return;
             }
         };
@@ -224,7 +226,9 @@ impl DropzoneWindow {
         let lan_ip = match find_local_lan_ip() {
             Ok(ip) => ip,
             Err(_) => {
-                self.show_toast("Couldn’t start sharing: No local network connection available");
+                self.show_toast(&gettext(
+                    "Couldn’t start sharing: No local network connection available",
+                ));
                 return;
             }
         };
@@ -241,10 +245,10 @@ impl DropzoneWindow {
                     self_ref.on_server_started(handle, &shared_file, &token);
                 }
                 Ok(Err(_)) => {
-                    self_ref.show_toast("Couldn’t start local HTTP server");
+                    self_ref.show_toast(&gettext("Couldn’t start local HTTP server"));
                 }
                 Err(_) => {
-                    self_ref.show_toast("Server task was cancelled");
+                    self_ref.show_toast(&gettext("Server task was cancelled"));
                 }
             }
         });
@@ -273,7 +277,7 @@ impl DropzoneWindow {
                 self.qr_container.append(&qr_widget);
             }
             Err(_) => {
-                self.show_toast("Failed to render QR code");
+                self.show_toast(&gettext("Failed to render QR code"));
             }
         }
 

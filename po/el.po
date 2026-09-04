@@ -1,0 +1,140 @@
+# Greek translation for Dropzone.
+# Copyright (C) 2026 dragonGR
+# This file is distributed under the same license as the dropzone package.
+# dragonGR <alex@debtman.dev>, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: dropzone 1.0.0\n"
+"Report-Msgid-Bugs-To: https://github.com/dragonGR/dropzone/issues\n"
+"POT-Creation-Date: 2026-09-04 12:48+0300\n"
+"PO-Revision-Date: 2026-09-04 12:50+0300\n"
+"Last-Translator: dragonGR <alex@debtman.dev>\n"
+"Language-Team: Greek <gnome-el-list@gnome.org>\n"
+"Language: el\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: data/io.github.dragonGR.Dropzone.desktop.in:2
+#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:6 src/window.rs:38
+#: src/window.rs:127
+msgid "Dropzone"
+msgstr "Dropzone"
+
+#: data/io.github.dragonGR.Dropzone.desktop.in:3
+msgid "Share files temporarily over the local network"
+msgstr "Προσωρινή κοινή χρήση αρχείων στο τοπικό δίκτυο"
+
+#: data/io.github.dragonGR.Dropzone.desktop.in:9
+msgid "share;transfer;lan;local;network;qr;drop;"
+msgstr "κοινή χρήση;μεταφορά;τοπικό;δίκτυο;qr;απόθεση;lan;share;transfer;drop;"
+
+#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:7
+msgid "Temporary file sharing over the local network"
+msgstr "Προσωρινή κοινή χρήση αρχείων στο τοπικό δίκτυο"
+
+#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:9
+msgid ""
+"Dropzone is a GNOME application for fast, temporary file sharing over the "
+"local network."
+msgstr ""
+"Το Dropzone είναι μια εφαρμογή GNOME για γρήγορη, προσωρινή κοινή χρήση "
+"αρχείων μέσω του τοπικού δικτύου."
+
+#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:12
+msgid ""
+"Select a file to start an ephemeral HTTP server and generate a "
+"cryptographically random capability URL with a QR code. Any device on the "
+"same local network can scan the QR code and download the file directly in a "
+"web browser without installing additional software or creating accounts."
+msgstr ""
+"Επιλέξτε ένα αρχείο για να εκκινήσετε έναν εφήμερο διακομιστή HTTP και να "
+"δημιουργήσετε έναν κρυπτογραφικά τυχαίο σύνδεσμο με κωδικό QR. Οποιαδήποτε "
+"συσκευή στο ίδιο τοπικό δίκτυο μπορεί να σαρώσει τον κωδικό QR και να "
+"κατεβάσει το αρχείο απευθείας από έναν περιηγητή ιστού, χωρίς εγκατάσταση "
+"πρόσθετου λογισμικού ή λογαριασμούς."
+
+#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:15
+msgid "Stopping sharing immediately stops the server and invalidates the link."
+msgstr ""
+"Η διακοπή της κοινής χρήσης τερματίζει άμεσα τον διακομιστή και ακυρώνει τον "
+"σύνδεσμο."
+
+#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:24
+msgid "dragonGR"
+msgstr "dragonGR"
+
+#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:30
+msgid ""
+"Initial release with single-file sharing, Cairo vector QR code rendering, "
+"and ephemeral HTTP streaming."
+msgstr ""
+"Αρχική έκδοση με κοινή χρήση αρχείου, απόδοση διανυσματικού κώδικα QR με "
+"Cairo και εφήμερη ροή HTTP."
+
+#: src/window.rs:39
+msgid "Drop files here"
+msgstr "Αποθέστε αρχεία εδώ"
+
+#: src/window.rs:43
+msgid "Choose Files"
+msgstr "Επιλογή αρχείων"
+
+#: src/window.rs:47
+msgid "Select a file to share over the local network"
+msgstr "Επιλέξτε ένα αρχείο για κοινή χρήση στο τοπικό δίκτυο"
+
+#: src/window.rs:83
+msgid "Temporary capability URL for downloading"
+msgstr "Προσωρινός σύνδεσμος για λήψη του αρχείου"
+
+#: src/window.rs:88 src/window.rs:91
+msgid "Copy Link"
+msgstr "Αντιγραφή συνδέσμου"
+
+#: src/window.rs:98
+msgid "Stop Sharing"
+msgstr "Διακοπή κοινής χρήσης"
+
+#: src/window.rs:101
+msgid "Stop sharing and invalidate the download link"
+msgstr "Διακοπή κοινής χρήσης και άμεση ακύρωση του συνδέσμου λήψης"
+
+#: src/window.rs:184
+msgid "Link copied to clipboard"
+msgstr "Ο σύνδεσμος αντιγράφηκε στο πρόχειρο"
+
+#: src/window.rs:190
+msgid "Choose File to Share"
+msgstr "Επιλογή αρχείου για κοινή χρήση"
+
+#: src/window.rs:202
+msgid "File selection failed"
+msgstr "Η επιλογή αρχείου απέτυχε"
+
+#: src/window.rs:213
+msgid "Couldn’t resolve selected file path"
+msgstr "Αδυναμία εύρεσης της διαδρομής του επιλεγμένου αρχείου"
+
+#: src/window.rs:221
+msgid "Couldn’t read selected file"
+msgstr "Αδυναμία ανάγνωσης του επιλεγμένου αρχείου"
+
+#: src/window.rs:230
+msgid "Couldn’t start sharing: No local network connection available"
+msgstr ""
+"Αδυναμία έναρξης κοινής χρήσης: Δεν βρέθηκε ενεργή τοπική σύνδεση δικτύου"
+
+#: src/window.rs:248
+msgid "Couldn’t start local HTTP server"
+msgstr "Αδυναμία εκκίνησης του τοπικού διακομιστή HTTP"
+
+#: src/window.rs:251
+msgid "Server task was cancelled"
+msgstr "Η εργασία του διακομιστή ακυρώθηκε"
+
+#: src/window.rs:280
+msgid "Failed to render QR code"
+msgstr "Αποτυχία δημιουργίας κωδικού QR"

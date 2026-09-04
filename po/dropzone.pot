@@ -1,0 +1,128 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the dropzone package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: dropzone\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-09-04 12:48+0300\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: data/io.github.dragonGR.Dropzone.desktop.in:2
+#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:6 src/window.rs:38
+#: src/window.rs:127
+msgid "Dropzone"
+msgstr ""
+
+#: data/io.github.dragonGR.Dropzone.desktop.in:3
+msgid "Share files temporarily over the local network"
+msgstr ""
+
+#: data/io.github.dragonGR.Dropzone.desktop.in:9
+msgid "share;transfer;lan;local;network;qr;drop;"
+msgstr ""
+
+#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:7
+msgid "Temporary file sharing over the local network"
+msgstr ""
+
+#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:9
+msgid ""
+"Dropzone is a GNOME application for fast, temporary file sharing over the "
+"local network."
+msgstr ""
+
+#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:12
+msgid ""
+"Select a file to start an ephemeral HTTP server and generate a "
+"cryptographically random capability URL with a QR code. Any device on the "
+"same local network can scan the QR code and download the file directly in a "
+"web browser without installing additional software or creating accounts."
+msgstr ""
+
+#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:15
+msgid "Stopping sharing immediately stops the server and invalidates the link."
+msgstr ""
+
+#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:24
+msgid "dragonGR"
+msgstr ""
+
+#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:30
+msgid ""
+"Initial release with single-file sharing, Cairo vector QR code rendering, "
+"and ephemeral HTTP streaming."
+msgstr ""
+
+#: src/window.rs:39
+msgid "Drop files here"
+msgstr ""
+
+#: src/window.rs:43
+msgid "Choose Files"
+msgstr ""
+
+#: src/window.rs:47
+msgid "Select a file to share over the local network"
+msgstr ""
+
+#: src/window.rs:83
+msgid "Temporary capability URL for downloading"
+msgstr ""
+
+#: src/window.rs:88 src/window.rs:91
+msgid "Copy Link"
+msgstr ""
+
+#: src/window.rs:98
+msgid "Stop Sharing"
+msgstr ""
+
+#: src/window.rs:101
+msgid "Stop sharing and invalidate the download link"
+msgstr ""
+
+#: src/window.rs:184
+msgid "Link copied to clipboard"
+msgstr ""
+
+#: src/window.rs:190
+msgid "Choose File to Share"
+msgstr ""
+
+#: src/window.rs:202
+msgid "File selection failed"
+msgstr ""
+
+#: src/window.rs:213
+msgid "Couldn’t resolve selected file path"
+msgstr ""
+
+#: src/window.rs:221
+msgid "Couldn’t read selected file"
+msgstr ""
+
+#: src/window.rs:230
+msgid "Couldn’t start sharing: No local network connection available"
+msgstr ""
+
+#: src/window.rs:248
+msgid "Couldn’t start local HTTP server"
+msgstr ""
+
+#: src/window.rs:251
+msgid "Server task was cancelled"
+msgstr ""
+
+#: src/window.rs:280
+msgid "Failed to render QR code"
+msgstr ""
