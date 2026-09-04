@@ -17,12 +17,26 @@
     </p>
   </description>
   <launchable type="desktop-id">@APP_ID@.desktop</launchable>
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/dragonGR/dropzone/main/data/screenshots/dropzone-idle.png</image>
+      <caption>Choose or drag files to share over the local network</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/dragonGR/dropzone/main/data/screenshots/dropzone-sharing.png</image>
+      <caption>Active sharing session with QR code and copyable LAN link</caption>
+    </screenshot>
+  </screenshots>
   <url type="homepage">https://github.com/dragonGR/dropzone</url>
   <url type="bugtracker">https://github.com/dragonGR/dropzone/issues</url>
   <url type="vcs-browser">https://github.com/dragonGR/dropzone</url>
   <developer id="dev.debtman">
     <name>dragonGR</name>
   </developer>
+  <branding>
+    <color type="primary" scheme_preference="light">#3584e4</color>
+    <color type="primary" scheme_preference="dark">#1c71d8</color>
+  </branding>
   <content_rating type="oars-1.1" />
   <releases>
     <release version="1.0.0" date="2026-09-04">

@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-mod application;
-mod window;
-
-use application::DropzoneApplication;
+use dropzone::application::DropzoneApplication;
 use gtk4::glib;
 use libadwaita as adw;
 

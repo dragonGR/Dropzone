@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use dropzone::network::interfaces::find_local_lan_ip;
-use dropzone::qr::create_qr_widget;
-use dropzone::server::routes::start_server;
-use dropzone::server::state::ServerHandle;
-use dropzone::share::files::SharedFile;
-use dropzone::share::session::ShareSession;
+use crate::network::interfaces::find_local_lan_ip;
+use crate::qr::create_qr_widget;
+use crate::server::routes::start_server;
+use crate::server::state::ServerHandle;
+use crate::share::files::SharedFile;
+use crate::share::session::ShareSession;
 use gettextrs::gettext;
 use gtk4::glib;
 use gtk4::prelude::*;
