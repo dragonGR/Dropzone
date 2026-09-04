@@ -11,13 +11,11 @@
     "--share=network",
     "--share=ipc",
     "--socket=fallback-x11",
-    "--socket=wayland"
+    "--socket=wayland",
+    "--device=dri"
   ],
   "build-options": {
     "append-path": "/usr/lib/sdk/rust-stable/bin",
-    "build-args": [
-      "--share=network"
-    ],
     "env": {
       "CARGO_HOME": "/run/build/dropzone/cargo-home"
     }
@@ -30,7 +28,8 @@
         {
           "type": "dir",
           "path": "../"
-        }
+        },
+        "cargo-sources.json"
       ]
     }
   ]
