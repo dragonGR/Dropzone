@@ -4,18 +4,26 @@ use crate::network::interfaces::find_local_lan_ip;
 use crate::qr::create_qr_widget;
 use crate::server::routes::start_server;
 use crate::server::state::ServerHandle;
-use crate::share::files::SharedFile;
+use crate::share::files::{SharedFile, format_file_size};
 use crate::share::session::ShareSession;
-use gettextrs::gettext;
+use crate::share::transfer::{TransferLifecycleEvent, TransferProgressEvent};
+use gettextrs::{gettext, ngettext};
 use gtk4::glib;
 use gtk4::prelude::*;
 use gtk4::{
     Align, Box, Button, DropTarget, Entry, Image, Label, MenuButton, Orientation, Popover,
-    Separator, ToggleButton, gdk, gio,
+    ProgressBar, Separator, ToggleButton, gdk, gio,
 };
 use libadwaita as adw;
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
+
+#[derive(Debug, Clone)]
+struct ActiveTransferState {
+    total_bytes: u64,
+    bytes_streamed: u64,
+}
 
 pub struct DropzoneWindow {
     window: adw::ApplicationWindow,
@@ -26,6 +34,9 @@ pub struct DropzoneWindow {
     file_size_label: Label,
     qr_container: Box,
     url_entry: Entry,
+    transfer_status_label: Label,
+    transfer_progress_bar: ProgressBar,
+    active_transfers: Rc<RefCell<HashMap<u64, ActiveTransferState>>>,
 
     server_handle: Rc<RefCell<Option<ServerHandle>>>,
     tokio_handle: tokio::runtime::Handle,
@@ -202,17 +213,22 @@ impl DropzoneWindow {
         sharing_box.set_margin_start(24);
         sharing_box.set_margin_end(24);
         sharing_box.set_halign(Align::Center);
+
         sharing_box.set_valign(Align::Center);
 
         let file_name_label = Label::builder()
             .css_classes(["title-2"])
             .wrap(true)
             .justify(gtk4::Justification::Center)
+            .halign(Align::Center)
             .max_width_chars(30)
             .ellipsize(gtk4::pango::EllipsizeMode::Middle)
             .build();
 
-        let file_size_label = Label::builder().css_classes(["dim-label"]).build();
+        let file_size_label = Label::builder()
+            .css_classes(["dim-label"])
+            .halign(Align::Center)
+            .build();
 
         let qr_container = Box::new(Orientation::Vertical, 0);
         qr_container.set_halign(Align::Center);
@@ -239,6 +255,31 @@ impl DropzoneWindow {
         url_box.append(&url_entry);
         url_box.append(&copy_button);
 
+        let transfer_box = Box::new(Orientation::Vertical, 6);
+        transfer_box.set_halign(Align::Fill);
+        transfer_box.set_hexpand(true);
+        transfer_box.set_margin_top(4);
+        transfer_box.set_margin_bottom(4);
+
+        let transfer_status_label = Label::builder()
+            .label(gettext("Waiting for receiver…"))
+            .css_classes(["dim-label", "caption", "caption"])
+            .halign(Align::Center)
+            .justify(gtk4::Justification::Center)
+            .ellipsize(gtk4::pango::EllipsizeMode::Middle)
+            .max_width_chars(36)
+            .build();
+
+        let transfer_progress_bar = ProgressBar::builder()
+            .halign(Align::Fill)
+            .hexpand(true)
+            .fraction(0.0)
+            .visible(true)
+            .build();
+
+        transfer_box.append(&transfer_status_label);
+        transfer_box.append(&transfer_progress_bar);
+
         let stop_button = Button::builder()
             .label(gettext("Stop Sharing"))
             .css_classes(["destructive-action", "pill"])
@@ -251,6 +292,7 @@ impl DropzoneWindow {
         sharing_box.append(&file_size_label);
         sharing_box.append(&qr_container);
         sharing_box.append(&url_box);
+        sharing_box.append(&transfer_box);
         sharing_box.append(&stop_button);
 
         let clamp = adw::Clamp::builder()
@@ -283,6 +325,9 @@ impl DropzoneWindow {
             file_size_label,
             qr_container,
             url_entry,
+            transfer_status_label,
+            transfer_progress_bar,
+            active_transfers: Rc::new(RefCell::new(HashMap::new())),
             server_handle: Rc::new(RefCell::new(None)),
             tokio_handle,
         });
@@ -437,6 +482,25 @@ impl DropzoneWindow {
         let session = ShareSession::new(shared_file.clone());
         let token = session.token().as_str().to_string();
 
+        let (lifecycle_tx, mut lifecycle_rx) =
+            tokio::sync::mpsc::unbounded_channel::<TransferLifecycleEvent>();
+        let (progress_tx, mut progress_rx) =
+            tokio::sync::mpsc::channel::<TransferProgressEvent>(64);
+
+        let self_ref = self.clone_rc();
+        glib::MainContext::default().spawn_local(async move {
+            while let Some(event) = lifecycle_rx.recv().await {
+                self_ref.on_transfer_lifecycle(event);
+            }
+        });
+
+        let self_ref = self.clone_rc();
+        glib::MainContext::default().spawn_local(async move {
+            while let Some(event) = progress_rx.recv().await {
+                self_ref.on_transfer_progress(event);
+            }
+        });
+
         let (sender, receiver) = tokio::sync::oneshot::channel::<Result<ServerHandle, String>>();
 
         let self_ref = self.clone_rc();
@@ -455,7 +519,7 @@ impl DropzoneWindow {
         });
 
         self.tokio_handle.spawn(async move {
-            let result = start_server(lan_ip, session).await;
+            let result = start_server(lan_ip, session, lifecycle_tx, progress_tx).await;
             let _ = sender.send(result.map_err(|e| e.to_string()));
         });
     }
@@ -468,6 +532,14 @@ impl DropzoneWindow {
         self.file_name_label.set_text(file.name());
         self.file_size_label.set_text(&file.formatted_size());
         self.url_entry.set_text(&share_url);
+
+        self.active_transfers.borrow_mut().clear();
+        self.transfer_status_label
+            .set_text(&gettext("Waiting for receiver…"));
+        self.transfer_status_label
+            .set_css_classes(&["dim-label", "caption", "caption"]);
+        self.transfer_progress_bar.set_fraction(0.0);
+        self.transfer_progress_bar.set_visible(true);
 
         while let Some(child) = self.qr_container.first_child() {
             self.qr_container.remove(&child);
@@ -485,6 +557,127 @@ impl DropzoneWindow {
         self.view_stack.set_visible_child_name("sharing");
     }
 
+    fn on_transfer_lifecycle(&self, event: TransferLifecycleEvent) {
+        match event {
+            TransferLifecycleEvent::Started {
+                transfer_id,
+                file_name: _,
+                total_bytes,
+            } => {
+                self.active_transfers.borrow_mut().insert(
+                    transfer_id,
+                    ActiveTransferState {
+                        total_bytes,
+                        bytes_streamed: 0,
+                    },
+                );
+                self.update_transfer_ui();
+            }
+            TransferLifecycleEvent::Completed { transfer_id } => {
+                self.active_transfers.borrow_mut().remove(&transfer_id);
+                if self.active_transfers.borrow().is_empty() {
+                    self.transfer_status_label
+                        .set_text(&gettext("Download completed"));
+                    self.transfer_status_label
+                        .set_css_classes(&["caption", "caption"]);
+                    self.transfer_progress_bar.set_visible(true);
+                    self.transfer_progress_bar.set_fraction(1.0);
+                } else {
+                    self.update_transfer_ui();
+                }
+            }
+            TransferLifecycleEvent::Cancelled { transfer_id, .. } => {
+                self.active_transfers.borrow_mut().remove(&transfer_id);
+                if self.active_transfers.borrow().is_empty() {
+                    self.transfer_status_label
+                        .set_text(&gettext("Download cancelled"));
+                    self.transfer_status_label.set_css_classes(&[
+                        "dim-label",
+                        "caption",
+                        "caption",
+                    ]);
+                    self.transfer_progress_bar.set_fraction(0.0);
+                    self.transfer_progress_bar.set_visible(true);
+                } else {
+                    self.update_transfer_ui();
+                }
+            }
+            TransferLifecycleEvent::Failed { transfer_id, .. } => {
+                self.active_transfers.borrow_mut().remove(&transfer_id);
+                if self.active_transfers.borrow().is_empty() {
+                    self.transfer_status_label
+                        .set_text(&gettext("Download failed"));
+                    self.transfer_status_label.set_css_classes(&[
+                        "dim-label",
+                        "caption",
+                        "caption",
+                    ]);
+                    self.transfer_progress_bar.set_fraction(0.0);
+                    self.transfer_progress_bar.set_visible(true);
+                } else {
+                    self.update_transfer_ui();
+                }
+            }
+        }
+    }
+
+    fn on_transfer_progress(&self, event: TransferProgressEvent) {
+        let mut transfers = self.active_transfers.borrow_mut();
+        if let Some(state) = transfers.get_mut(&event.transfer_id) {
+            state.bytes_streamed = event.bytes_streamed;
+            drop(transfers);
+            self.update_transfer_ui();
+        }
+    }
+
+    fn update_transfer_ui(&self) {
+        let transfers = self.active_transfers.borrow();
+        match transfers.len() {
+            0 => {
+                self.transfer_status_label
+                    .set_text(&gettext("Waiting for receiver…"));
+                self.transfer_status_label
+                    .set_css_classes(&["dim-label", "caption", "caption"]);
+                self.transfer_progress_bar.set_fraction(0.0);
+                self.transfer_progress_bar.set_visible(true);
+            }
+            1 => {
+                let (_, transfer) = transfers.iter().next().unwrap();
+                let fraction = if transfer.total_bytes > 0 {
+                    (transfer.bytes_streamed as f64 / transfer.total_bytes as f64).clamp(0.0, 1.0)
+                } else {
+                    1.0
+                };
+                let percent = (fraction * 100.0).round() as u64;
+                let template = gettext("{streamed} / {total} ({percent}%)");
+                let formatted = format_transfer_status(
+                    &template,
+                    &format_file_size(transfer.bytes_streamed),
+                    &format_file_size(transfer.total_bytes),
+                    percent,
+                );
+                self.transfer_status_label.set_text(&formatted);
+                self.transfer_status_label
+                    .set_css_classes(&["caption", "caption"]);
+                self.transfer_progress_bar.set_fraction(fraction);
+                self.transfer_progress_bar.set_visible(true);
+            }
+            count => {
+                let n = count.min(u32::MAX as usize) as u32;
+                let plural_template = ngettext(
+                    "{count} download in progress",
+                    "{count} downloads in progress",
+                    n,
+                );
+                let text = plural_template.replace("{count}", &n.to_string());
+                self.transfer_status_label.set_text(&text);
+                self.transfer_status_label
+                    .set_css_classes(&["caption", "caption"]);
+                self.transfer_progress_bar.set_visible(false);
+            }
+        }
+    }
+
     pub fn stop_sharing(&self) {
         let mut handle_opt = self.server_handle.borrow_mut();
         if let Some(mut handle) = handle_opt.take() {
@@ -492,6 +685,14 @@ impl DropzoneWindow {
                 handle.stop().await;
             });
         }
+
+        self.active_transfers.borrow_mut().clear();
+        self.transfer_status_label
+            .set_text(&gettext("Waiting for receiver…"));
+        self.transfer_status_label
+            .set_css_classes(&["dim-label", "caption", "caption"]);
+        self.transfer_progress_bar.set_fraction(0.0);
+        self.transfer_progress_bar.set_visible(true);
 
         while let Some(child) = self.qr_container.first_child() {
             self.qr_container.remove(&child);
@@ -509,8 +710,49 @@ impl DropzoneWindow {
             file_size_label: self.file_size_label.clone(),
             qr_container: self.qr_container.clone(),
             url_entry: self.url_entry.clone(),
+            transfer_status_label: self.transfer_status_label.clone(),
+            transfer_progress_bar: self.transfer_progress_bar.clone(),
+            active_transfers: Rc::clone(&self.active_transfers),
             server_handle: Rc::clone(&self.server_handle),
             tokio_handle: self.tokio_handle.clone(),
         })
+    }
+}
+
+/// Formats a transfer progress string from a translated template with named placeholders.
+///
+/// Translators may freely reorder `{streamed}`, `{total}`, and `{percent}` to fit natural language syntax.
+pub fn format_transfer_status(template: &str, streamed: &str, total: &str, percent: u64) -> String {
+    template
+        .replace("{streamed}", streamed)
+        .replace("{total}", total)
+        .replace("{percent}", &percent.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_format_transfer_status_reordering_and_placeholders() {
+        let template_en = "{streamed} / {total} ({percent}%)";
+        assert_eq!(
+            format_transfer_status(template_en, "10 MB", "100 MB", 10),
+            "10 MB / 100 MB (10%)"
+        );
+
+        // Translator reordering placeholders (e.g. prefix percentage)
+        let template_reordered = "({percent}%) {streamed} of {total}";
+        assert_eq!(
+            format_transfer_status(template_reordered, "10 MB", "100 MB", 10),
+            "(10%) 10 MB of 100 MB"
+        );
+
+        // Translator omitting percent if desired
+        let template_no_percent = "{streamed} / {total}";
+        assert_eq!(
+            format_transfer_status(template_no_percent, "10 MB", "100 MB", 10),
+            "10 MB / 100 MB"
+        );
     }
 }

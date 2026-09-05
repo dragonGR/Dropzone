@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use crate::server::download::{escape_html, format_content_disposition, guess_mime_type};
+use crate::server::progress_stream::ProgressReader;
 use crate::server::state::{ServerHandle, ServerState};
 use crate::share::session::ShareSession;
+use crate::share::transfer::{TransferLifecycleEvent, TransferProgressEvent};
 use axum::Router;
 use axum::extract::{Path, State};
 use axum::http::{StatusCode, header};
@@ -12,7 +14,7 @@ use std::io;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::sync::Arc;
 use tokio::net::TcpListener;
-use tokio::sync::oneshot;
+use tokio::sync::{mpsc, oneshot};
 use tokio_util::io::ReaderStream;
 
 const INDEX_HTML_TEMPLATE: &str = include_str!("../../web/index.html");
@@ -94,7 +96,26 @@ async fn download_file(
 
     let mime_type = guess_mime_type(&file_name);
     let content_disposition = format_content_disposition(&file_name);
-    let stream = ReaderStream::new(tokio_file);
+
+    let transfer_id = state
+        .transfer_counter
+        .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+
+    let _ = state.lifecycle_tx.send(TransferLifecycleEvent::Started {
+        transfer_id,
+        file_name: file_name.clone(),
+        total_bytes: file_size,
+    });
+
+    let progress_reader = ProgressReader::new(
+        tokio_file,
+        transfer_id,
+        file_size,
+        state.lifecycle_tx.clone(),
+        state.progress_tx.clone(),
+        state.cancel_token.clone(),
+    );
+    let stream = ReaderStream::new(progress_reader);
     let body = axum::body::Body::from_stream(stream);
 
     Response::builder()
@@ -120,7 +141,12 @@ pub fn build_router(state: Arc<ServerState>) -> Router {
 }
 
 /// Starts an ephemeral HTTP server on an OS-assigned port.
-pub async fn start_server(lan_ip: Ipv4Addr, session: ShareSession) -> io::Result<ServerHandle> {
+pub async fn start_server(
+    lan_ip: Ipv4Addr,
+    session: ShareSession,
+    lifecycle_tx: mpsc::UnboundedSender<TransferLifecycleEvent>,
+    progress_tx: mpsc::Sender<TransferProgressEvent>,
+) -> io::Result<ServerHandle> {
     let bind_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0);
     let listener = TcpListener::bind(bind_addr).await?;
     let bound_port = listener.local_addr()?.port();
@@ -128,7 +154,7 @@ pub async fn start_server(lan_ip: Ipv4Addr, session: ShareSession) -> io::Result
     let bound_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), bound_port);
     let published_addr = SocketAddr::new(IpAddr::V4(lan_ip), bound_port);
 
-    let state = Arc::new(ServerState::new(session));
+    let state = Arc::new(ServerState::new(session, lifecycle_tx, progress_tx));
     let router = build_router(Arc::clone(&state));
 
     let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
