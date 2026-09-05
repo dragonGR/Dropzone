@@ -212,8 +212,8 @@ impl DropzoneWindow {
         sharing_box.set_margin_bottom(20);
         sharing_box.set_margin_start(24);
         sharing_box.set_margin_end(24);
-        sharing_box.set_halign(Align::Center);
-
+        sharing_box.set_halign(Align::Fill);
+        sharing_box.set_hexpand(true);
         sharing_box.set_valign(Align::Center);
 
         let file_name_label = Label::builder()
@@ -263,7 +263,7 @@ impl DropzoneWindow {
 
         let transfer_status_label = Label::builder()
             .label(gettext("Waiting for receiver…"))
-            .css_classes(["dim-label", "caption", "caption"])
+            .css_classes(["dim-label", "caption", "transfer-status"])
             .halign(Align::Center)
             .justify(gtk4::Justification::Center)
             .ellipsize(gtk4::pango::EllipsizeMode::Middle)
@@ -537,7 +537,7 @@ impl DropzoneWindow {
         self.transfer_status_label
             .set_text(&gettext("Waiting for receiver…"));
         self.transfer_status_label
-            .set_css_classes(&["dim-label", "caption", "caption"]);
+            .set_css_classes(&["dim-label", "caption", "transfer-status"]);
         self.transfer_progress_bar.set_fraction(0.0);
         self.transfer_progress_bar.set_visible(true);
 
@@ -579,7 +579,7 @@ impl DropzoneWindow {
                     self.transfer_status_label
                         .set_text(&gettext("Download completed"));
                     self.transfer_status_label
-                        .set_css_classes(&["caption", "caption"]);
+                        .set_css_classes(&["caption", "transfer-status"]);
                     self.transfer_progress_bar.set_visible(true);
                     self.transfer_progress_bar.set_fraction(1.0);
                 } else {
@@ -594,7 +594,7 @@ impl DropzoneWindow {
                     self.transfer_status_label.set_css_classes(&[
                         "dim-label",
                         "caption",
-                        "caption",
+                        "transfer-status",
                     ]);
                     self.transfer_progress_bar.set_fraction(0.0);
                     self.transfer_progress_bar.set_visible(true);
@@ -610,7 +610,7 @@ impl DropzoneWindow {
                     self.transfer_status_label.set_css_classes(&[
                         "dim-label",
                         "caption",
-                        "caption",
+                        "transfer-status",
                     ]);
                     self.transfer_progress_bar.set_fraction(0.0);
                     self.transfer_progress_bar.set_visible(true);
@@ -636,8 +636,11 @@ impl DropzoneWindow {
             0 => {
                 self.transfer_status_label
                     .set_text(&gettext("Waiting for receiver…"));
-                self.transfer_status_label
-                    .set_css_classes(&["dim-label", "caption", "caption"]);
+                self.transfer_status_label.set_css_classes(&[
+                    "dim-label",
+                    "caption",
+                    "transfer-status",
+                ]);
                 self.transfer_progress_bar.set_fraction(0.0);
                 self.transfer_progress_bar.set_visible(true);
             }
@@ -658,7 +661,7 @@ impl DropzoneWindow {
                 );
                 self.transfer_status_label.set_text(&formatted);
                 self.transfer_status_label
-                    .set_css_classes(&["caption", "caption"]);
+                    .set_css_classes(&["caption", "transfer-status"]);
                 self.transfer_progress_bar.set_fraction(fraction);
                 self.transfer_progress_bar.set_visible(true);
             }
@@ -672,7 +675,7 @@ impl DropzoneWindow {
                 let text = plural_template.replace("{count}", &n.to_string());
                 self.transfer_status_label.set_text(&text);
                 self.transfer_status_label
-                    .set_css_classes(&["caption", "caption"]);
+                    .set_css_classes(&["caption", "transfer-status"]);
                 self.transfer_progress_bar.set_visible(false);
             }
         }
@@ -690,7 +693,7 @@ impl DropzoneWindow {
         self.transfer_status_label
             .set_text(&gettext("Waiting for receiver…"));
         self.transfer_status_label
-            .set_css_classes(&["dim-label", "caption", "caption"]);
+            .set_css_classes(&["dim-label", "caption", "transfer-status"]);
         self.transfer_progress_bar.set_fraction(0.0);
         self.transfer_progress_bar.set_visible(true);
 
