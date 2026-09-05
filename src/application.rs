@@ -86,7 +86,7 @@ impl DropzoneApplication {
                 .application_name(gettextrs::gettext("Dropzone"))
                 .application_icon("io.github.dragonGR.Dropzone")
                 .developer_name("dragonGR")
-                .version("1.0.0")
+                .version(env!("CARGO_PKG_VERSION"))
                 .comments(gettextrs::gettext(
                     "Temporary file sharing over the local network",
                 ))

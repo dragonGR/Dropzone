@@ -39,6 +39,17 @@
   </branding>
   <content_rating type="oars-1.1" />
   <releases>
+    <release version="1.1.0" date="2026-09-05">
+      <description>
+        <p>This release introduces live transfer progress tracking and session cancellation improvements:</p>
+        <ul>
+          <li>Real-time transfer progress tracking with animated activity indicator and streamed byte counters</li>
+          <li>Instant in-flight download cancellation when sharing is stopped</li>
+          <li>Layout stabilization with tabular numeric figures to eliminate header jitter</li>
+          <li>Updated Greek translations</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.0.0" date="2026-09-04">
       <description>
         <p>Initial release with single-file sharing, Cairo vector QR code rendering, and ephemeral HTTP streaming.</p>
