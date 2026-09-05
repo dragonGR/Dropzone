@@ -170,3 +170,30 @@ msgstr "Η εργασία του διακομιστή ακυρώθηκε"
 #: src/window.rs:483
 msgid "Failed to render QR code"
 msgstr "Αποτυχία δημιουργίας κωδικού QR"
+
+#: src/window.rs:260
+msgid "Waiting for receiver…"
+msgstr "Αναμονή για παραλήπτη…"
+
+#: src/window.rs:582
+msgid "Download completed"
+msgstr "Η λήψη ολοκληρώθηκε"
+
+#: src/window.rs:594
+msgid "Download cancelled"
+msgstr "Η λήψη ακυρώθηκε"
+
+#: src/window.rs:606
+msgid "Download failed"
+msgstr "Η λήψη απέτυχε"
+
+#: src/window.rs:642
+msgid "{streamed} / {total} ({percent}%)"
+msgstr "{streamed} / {total} ({percent}%)"
+
+#: src/window.rs:659
+msgid "{count} download in progress"
+msgid_plural "{count} downloads in progress"
+msgstr[0] "{count} λήψη σε εξέλιξη"
+msgstr[1] "{count} λήψεις σε εξέλιξη"
+

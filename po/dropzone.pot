@@ -158,3 +158,30 @@ msgstr ""
 #: src/window.rs:483
 msgid "Failed to render QR code"
 msgstr ""
+
+#: src/window.rs:260
+msgid "Waiting for receiver…"
+msgstr ""
+
+#: src/window.rs:582
+msgid "Download completed"
+msgstr ""
+
+#: src/window.rs:594
+msgid "Download cancelled"
+msgstr ""
+
+#: src/window.rs:606
+msgid "Download failed"
+msgstr ""
+
+#: src/window.rs:642
+msgid "{streamed} / {total} ({percent}%)"
+msgstr ""
+
+#: src/window.rs:659
+msgid "{count} download in progress"
+msgid_plural "{count} downloads in progress"
+msgstr[0] ""
+msgstr[1] ""
+
