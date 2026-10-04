@@ -39,6 +39,16 @@
   </branding>
   <content_rating type="oars-1.1" />
   <releases>
+    <release version="1.2.1" date="2026-10-05">
+      <description>
+        <p>This release updates how Dropzone looks in software stores.</p>
+        <ul>
+          <li>New app icon</li>
+          <li>Shorter summary and new brand colors</li>
+          <li>New screenshots</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.2.0" date="2026-10-05">
       <description>
         <p>This release makes sharing more reliable and adds an Italian translation.</p>

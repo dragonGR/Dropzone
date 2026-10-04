@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: dropzone\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-05 01:59+0300\n"
+"POT-Creation-Date: 2026-10-05 02:07+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -67,64 +67,80 @@ msgid "dragonGR"
 msgstr ""
 
 #: data/io.github.dragonGR.Dropzone.metainfo.xml.in:44
+msgid "This release updates how Dropzone looks in software stores."
+msgstr ""
+
+#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:46
+msgid "New app icon"
+msgstr ""
+
+#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:47
+msgid "Shorter summary and new brand colors"
+msgstr ""
+
+#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:48
+msgid "New screenshots"
+msgstr ""
+
+#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:54
 msgid ""
 "This release makes sharing more reliable and adds an Italian translation."
 msgstr ""
 
-#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:46
+#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:56
 msgid ""
 "Stopping a share now ends every download at once, including stalled ones"
 msgstr ""
 
-#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:47
+#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:57
 msgid ""
 "Connections that never send a request are closed, and the number of open "
 "connections is limited"
 msgstr ""
 
-#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:48
+#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:58
 msgid ""
 "Opening Dropzone again shows the existing window instead of a second one"
 msgstr ""
 
-#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:49
+#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:59
 msgid "File details are read without freezing the window"
 msgstr ""
 
-#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:50
+#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:60
 msgid "Downloads use much less CPU"
 msgstr ""
 
-#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:51
+#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:61
 msgid "Italian translation by Albano Battistella"
 msgstr ""
 
-#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:57
+#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:67
 msgid ""
 "This release introduces live transfer progress tracking and session "
 "cancellation improvements:"
 msgstr ""
 
-#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:59
+#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:69
 msgid ""
 "Real-time transfer progress tracking with animated activity indicator and "
 "streamed byte counters"
 msgstr ""
 
-#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:60
+#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:70
 msgid "Instant in-flight download cancellation when sharing is stopped"
 msgstr ""
 
-#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:61
+#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:71
 msgid ""
 "Layout stabilization with tabular numeric figures to eliminate header jitter"
 msgstr ""
 
-#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:62
+#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:72
 msgid "Updated Greek translations"
 msgstr ""
 
-#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:68
+#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:78
 msgid ""
 "Initial release with single-file sharing, Cairo vector QR code rendering, "
 "and ephemeral HTTP streaming."
