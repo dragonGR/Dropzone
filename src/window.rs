@@ -6,8 +6,11 @@ use crate::server::connections::ServerLimits;
 use crate::server::routes::start_server;
 use crate::server::state::ServerHandle;
 use crate::share::files::{SharedFile, format_file_size};
+use crate::share::phase::{SharePhase, StartAttempt};
 use crate::share::session::ShareSession;
+use crate::share::token::FileId;
 use crate::share::transfer::{TransferLifecycleEvent, TransferProgressEvent};
+use crate::transfer_feed::{TransferEvent, TransferFeed};
 use gettextrs::{gettext, ngettext};
 use gtk4::glib;
 use gtk4::prelude::*;
@@ -19,6 +22,7 @@ use libadwaita as adw;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
+use tokio::sync::{mpsc, oneshot};
 
 #[derive(Debug, Clone)]
 struct ActiveTransferState {
@@ -26,10 +30,18 @@ struct ActiveTransferState {
     bytes_streamed: u64,
 }
 
+/// Everything kept alive while sharing. Dropping it stops event delivery and
+/// shuts the server down.
+struct ActiveShare {
+    server: ServerHandle,
+    feed: TransferFeed,
+}
+
 pub struct DropzoneWindow {
     window: adw::ApplicationWindow,
     toast_overlay: adw::ToastOverlay,
     view_stack: adw::ViewStack,
+    choose_button: Button,
 
     file_name_label: Label,
     file_size_label: Label,
@@ -37,9 +49,9 @@ pub struct DropzoneWindow {
     url_entry: Entry,
     transfer_status_label: Label,
     transfer_progress_bar: ProgressBar,
-    active_transfers: Rc<RefCell<HashMap<u64, ActiveTransferState>>>,
+    active_transfers: RefCell<HashMap<u64, ActiveTransferState>>,
 
-    server_handle: Rc<RefCell<Option<ServerHandle>>>,
+    share: RefCell<SharePhase<ActiveShare>>,
     tokio_handle: tokio::runtime::Handle,
 }
 
@@ -322,29 +334,35 @@ impl DropzoneWindow {
             window,
             toast_overlay,
             view_stack,
+            choose_button: choose_button.clone(),
             file_name_label,
             file_size_label,
             qr_container,
             url_entry,
             transfer_status_label,
             transfer_progress_bar,
-            active_transfers: Rc::new(RefCell::new(HashMap::new())),
-            server_handle: Rc::new(RefCell::new(None)),
+            active_transfers: RefCell::new(HashMap::new()),
+            share: RefCell::new(SharePhase::default()),
             tokio_handle,
         });
 
-        let self_clone = Rc::clone(&dropzone_window);
+        let weak = Rc::downgrade(&dropzone_window);
         choose_button.connect_clicked(move |_| {
-            self_clone.on_choose_files_clicked();
+            if let Some(window) = weak.upgrade() {
+                window.on_choose_files_clicked();
+            }
         });
 
         let drop_target = DropTarget::new(glib::Type::INVALID, gdk::DragAction::COPY);
         drop_target.set_types(&[gdk::FileList::static_type(), gio::File::static_type()]);
 
+        let weak = Rc::downgrade(&dropzone_window);
         let status_page_clone = status_page.clone();
-        let view_stack_clone = dropzone_window.view_stack.clone();
         drop_target.connect_enter(move |_target, _x, _y| {
-            if view_stack_clone.visible_child_name().as_deref() == Some("idle") {
+            if weak
+                .upgrade()
+                .is_some_and(|window| window.share.borrow().is_idle())
+            {
                 status_page_clone.add_css_class("drag-hover");
                 gdk::DragAction::COPY
             } else {
@@ -357,56 +375,46 @@ impl DropzoneWindow {
             status_page_clone.remove_css_class("drag-hover");
         });
 
-        let self_clone = Rc::clone(&dropzone_window);
+        let weak = Rc::downgrade(&dropzone_window);
         let status_page_clone = status_page.clone();
         drop_target.connect_drop(move |_target, value, _x, _y| -> bool {
             status_page_clone.remove_css_class("drag-hover");
 
-            if self_clone.view_stack.visible_child_name().as_deref() != Some("idle") {
-                self_clone.show_toast(&gettext(
-                    "A sharing session is already active. Please stop it first.",
-                ));
+            let Some(window) = weak.upgrade() else {
                 return false;
-            }
-
+            };
             let gio_file = if let Ok(file_list) = value.get::<gdk::FileList>() {
-                let files = file_list.files();
-                files.into_iter().next()
+                file_list.files().into_iter().next()
             } else {
                 value.get::<gio::File>().ok()
             };
-
-            if let Some(file) = gio_file {
-                if file.query_file_type(gio::FileQueryInfoFlags::NONE, gio::Cancellable::NONE)
-                    == gio::FileType::Directory
-                {
-                    self_clone.show_toast(&gettext(
-                        "Directories cannot be shared directly. Please select a file.",
-                    ));
-                    return false;
-                }
-                self_clone.on_file_selected(file);
-                true
-            } else {
-                false
+            match gio_file {
+                Some(file) => window.start_sharing(file),
+                None => false,
             }
         });
 
         dropzone_window.window.add_controller(drop_target);
 
-        let self_clone = Rc::clone(&dropzone_window);
+        let weak = Rc::downgrade(&dropzone_window);
         copy_button.connect_clicked(move |_| {
-            self_clone.on_copy_link_clicked();
+            if let Some(window) = weak.upgrade() {
+                window.on_copy_link_clicked();
+            }
         });
 
-        let self_clone = Rc::clone(&dropzone_window);
+        let weak = Rc::downgrade(&dropzone_window);
         stop_button.connect_clicked(move |_| {
-            self_clone.stop_sharing();
+            if let Some(window) = weak.upgrade() {
+                window.stop_sharing();
+            }
         });
 
-        let self_clone = Rc::clone(&dropzone_window);
+        let weak = Rc::downgrade(&dropzone_window);
         dropzone_window.window.connect_close_request(move |_| {
-            self_clone.stop_sharing();
+            if let Some(window) = weak.upgrade() {
+                window.stop_sharing();
+            }
             glib::Propagation::Proceed
         });
 
@@ -432,110 +440,160 @@ impl DropzoneWindow {
         }
     }
 
-    fn on_choose_files_clicked(&self) {
+    /// Calls `f` when the user closes the window, after sharing has been stopped.
+    pub fn connect_closed(&self, f: impl Fn() + 'static) {
+        self.window.connect_close_request(move |_| {
+            f();
+            glib::Propagation::Proceed
+        });
+    }
+
+    fn on_choose_files_clicked(self: &Rc<Self>) {
         let file_dialog = gtk4::FileDialog::new();
         file_dialog.set_title(&gettext("Choose File to Share"));
 
-        let self_ref = self.clone_rc();
-        file_dialog.open(
-            Some(&self.window),
-            gio::Cancellable::NONE,
-            move |result| match result {
+        let weak = Rc::downgrade(self);
+        file_dialog.open(Some(&self.window), gio::Cancellable::NONE, move |result| {
+            let Some(window) = weak.upgrade() else {
+                return;
+            };
+            match result {
                 Ok(file) => {
-                    self_ref.on_file_selected(file);
+                    window.start_sharing(file);
                 }
                 Err(err) => {
                     if err.kind::<gtk4::DialogError>() != Some(gtk4::DialogError::Dismissed) {
-                        self_ref.show_toast(&gettext("File selection failed"));
+                        window.show_toast(&gettext("File selection failed"));
                     }
                 }
-            },
-        );
+            }
+        });
     }
 
-    fn on_file_selected(&self, gio_file: gio::File) {
-        let path = match gio_file.path() {
-            Some(p) => p,
-            None => {
-                self.show_toast(&gettext("Couldn’t resolve selected file path"));
-                return;
-            }
+    /// Starts sharing `file` unless a share is already starting or running.
+    /// Returns whether a start was begun.
+    fn start_sharing(self: &Rc<Self>, file: gio::File) -> bool {
+        let Some(attempt) = self.share.borrow_mut().begin_start() else {
+            self.show_toast(&gettext(
+                "A sharing session is already active. Please stop it first.",
+            ));
+            return false;
         };
+        self.choose_button.set_sensitive(false);
 
-        let shared_file = match SharedFile::from_path(path) {
-            Ok(f) => f,
-            Err(_) => {
-                self.show_toast(&gettext("Couldn’t read selected file"));
+        let weak = Rc::downgrade(self);
+        glib::spawn_future_local(async move {
+            // Queried asynchronously: on network or portal-backed files this may
+            // take long enough to freeze the window if done synchronously.
+            let info = file
+                .query_info_future(
+                    SHARED_FILE_ATTRIBUTES,
+                    gio::FileQueryInfoFlags::NONE,
+                    glib::Priority::DEFAULT,
+                )
+                .await;
+
+            let Some(window) = weak.upgrade() else {
                 return;
-            }
-        };
-
-        let lan_ip = match find_local_lan_ip() {
-            Ok(ip) => ip,
-            Err(_) => {
-                self.show_toast(&gettext(
-                    "Couldn’t start sharing: No local network connection available",
-                ));
+            };
+            let shared_file = match info
+                .map_err(|_| FileRejection::Unreadable)
+                .and_then(|info| shared_file_from_info(&file, &info))
+            {
+                Ok(shared_file) => shared_file,
+                Err(rejection) => {
+                    window.abandon_start(attempt, &rejection.message());
+                    return;
+                }
+            };
+            let Ok(lan_ip) = find_local_lan_ip() else {
+                window.abandon_start(
+                    attempt,
+                    &gettext("Couldn’t start sharing: No local network connection available"),
+                );
                 return;
-            }
-        };
+            };
 
-        let session = ShareSession::new(shared_file.clone());
-        let token = session.token().as_str().to_string();
+            let session = ShareSession::new(shared_file.clone());
+            let token = session.token().as_str().to_string();
+            let (lifecycle_tx, lifecycle_rx) = mpsc::unbounded_channel();
+            let (progress_tx, progress_rx) = mpsc::channel(PROGRESS_EVENT_CAPACITY);
+            let (started_tx, started_rx) = oneshot::channel();
+            window.tokio_handle.spawn(async move {
+                let started = start_server(
+                    lan_ip,
+                    session,
+                    ServerLimits::default(),
+                    lifecycle_tx,
+                    progress_tx,
+                )
+                .await;
+                // If the receiver is gone, dropping the handle shuts the server down.
+                let _ = started_tx.send(started);
+            });
+            drop(window);
 
-        let (lifecycle_tx, mut lifecycle_rx) =
-            tokio::sync::mpsc::unbounded_channel::<TransferLifecycleEvent>();
-        let (progress_tx, mut progress_rx) =
-            tokio::sync::mpsc::channel::<TransferProgressEvent>(64);
-
-        let self_ref = self.clone_rc();
-        glib::MainContext::default().spawn_local(async move {
-            while let Some(event) = lifecycle_rx.recv().await {
-                self_ref.on_transfer_lifecycle(event);
-            }
-        });
-
-        let self_ref = self.clone_rc();
-        glib::MainContext::default().spawn_local(async move {
-            while let Some(event) = progress_rx.recv().await {
-                self_ref.on_transfer_progress(event);
-            }
-        });
-
-        let (sender, receiver) = tokio::sync::oneshot::channel::<Result<ServerHandle, String>>();
-
-        let self_ref = self.clone_rc();
-        glib::MainContext::default().spawn_local(async move {
-            match receiver.await {
-                Ok(Ok(handle)) => {
-                    self_ref.on_server_started(handle, &shared_file, &token);
+            let started = started_rx.await;
+            let Some(window) = weak.upgrade() else {
+                return;
+            };
+            match started {
+                Ok(Ok(server)) => {
+                    window.finish_start(
+                        attempt,
+                        server,
+                        lifecycle_rx,
+                        progress_rx,
+                        &shared_file,
+                        &token,
+                    );
                 }
                 Ok(Err(_)) => {
-                    self_ref.show_toast(&gettext("Couldn’t start local HTTP server"));
+                    window.abandon_start(attempt, &gettext("Couldn’t start local HTTP server"));
                 }
                 Err(_) => {
-                    self_ref.show_toast(&gettext("Server task was cancelled"));
+                    window.abandon_start(attempt, &gettext("Server task was cancelled"));
                 }
             }
         });
-
-        self.tokio_handle.spawn(async move {
-            let result = start_server(
-                lan_ip,
-                session,
-                ServerLimits::default(),
-                lifecycle_tx,
-                progress_tx,
-            )
-            .await;
-            let _ = sender.send(result.map_err(|e| e.to_string()));
-        });
+        true
     }
 
-    fn on_server_started(&self, handle: ServerHandle, file: &SharedFile, token: &str) {
-        let share_url = format!("http://{}/s/{}", handle.published_addr, token);
+    fn abandon_start(&self, attempt: StartAttempt, message: &str) {
+        let current = self.share.borrow_mut().fail_start(attempt);
+        if current {
+            self.choose_button.set_sensitive(true);
+            self.show_toast(message);
+        }
+    }
 
-        *self.server_handle.borrow_mut() = Some(handle);
+    fn finish_start(
+        self: &Rc<Self>,
+        attempt: StartAttempt,
+        server: ServerHandle,
+        lifecycle_rx: mpsc::UnboundedReceiver<TransferLifecycleEvent>,
+        progress_rx: mpsc::Receiver<TransferProgressEvent>,
+        file: &SharedFile,
+        token: &str,
+    ) {
+        let share_url = format!("http://{}/s/{}", server.published_addr, token);
+
+        let weak = Rc::downgrade(self);
+        let feed = TransferFeed::spawn(lifecycle_rx, progress_rx, move |event| {
+            if let Some(window) = weak.upgrade() {
+                window.on_transfer_event(event);
+            }
+        });
+
+        let outcome = self
+            .share
+            .borrow_mut()
+            .finish_start(attempt, ActiveShare { server, feed });
+        if let Err(stale) = outcome {
+            // The user stopped or closed the window while the server was starting.
+            self.shut_down(stale);
+            return;
+        }
 
         self.file_name_label.set_text(file.name());
         self.file_size_label.set_text(&file.formatted_size());
@@ -563,6 +621,21 @@ impl DropzoneWindow {
         }
 
         self.view_stack.set_visible_child_name("sharing");
+    }
+
+    fn shut_down(&self, share: ActiveShare) {
+        let ActiveShare { mut server, feed } = share;
+        drop(feed);
+        self.tokio_handle.spawn(async move {
+            server.stop().await;
+        });
+    }
+
+    fn on_transfer_event(&self, event: TransferEvent) {
+        match event {
+            TransferEvent::Lifecycle(event) => self.on_transfer_lifecycle(event),
+            TransferEvent::Progress(event) => self.on_transfer_progress(event),
+        }
     }
 
     fn on_transfer_lifecycle(&self, event: TransferLifecycleEvent) {
@@ -690,12 +763,11 @@ impl DropzoneWindow {
     }
 
     pub fn stop_sharing(&self) {
-        let mut handle_opt = self.server_handle.borrow_mut();
-        if let Some(mut handle) = handle_opt.take() {
-            self.tokio_handle.spawn(async move {
-                handle.stop().await;
-            });
+        let share = self.share.borrow_mut().stop();
+        if let Some(share) = share {
+            self.shut_down(share);
         }
+        self.choose_button.set_sensitive(true);
 
         self.active_transfers.borrow_mut().clear();
         self.transfer_status_label
@@ -711,23 +783,53 @@ impl DropzoneWindow {
         self.url_entry.set_text("");
         self.view_stack.set_visible_child_name("idle");
     }
+}
 
-    fn clone_rc(&self) -> Rc<Self> {
-        Rc::new(Self {
-            window: self.window.clone(),
-            toast_overlay: self.toast_overlay.clone(),
-            view_stack: self.view_stack.clone(),
-            file_name_label: self.file_name_label.clone(),
-            file_size_label: self.file_size_label.clone(),
-            qr_container: self.qr_container.clone(),
-            url_entry: self.url_entry.clone(),
-            transfer_status_label: self.transfer_status_label.clone(),
-            transfer_progress_bar: self.transfer_progress_bar.clone(),
-            active_transfers: Rc::clone(&self.active_transfers),
-            server_handle: Rc::clone(&self.server_handle),
-            tokio_handle: self.tokio_handle.clone(),
-        })
+const SHARED_FILE_ATTRIBUTES: &str = "standard::type,standard::size,standard::display-name";
+const PROGRESS_EVENT_CAPACITY: usize = 64;
+
+/// Why a selected file cannot be shared.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum FileRejection {
+    Directory,
+    NotRegularFile,
+    NoLocalPath,
+    InvalidSize,
+    Unreadable,
+}
+
+impl FileRejection {
+    fn message(self) -> String {
+        match self {
+            Self::Directory => {
+                gettext("Directories cannot be shared directly. Please select a file.")
+            }
+            Self::NoLocalPath => gettext("Couldn’t resolve selected file path"),
+            Self::NotRegularFile | Self::InvalidSize | Self::Unreadable => {
+                gettext("Couldn’t read selected file")
+            }
+        }
     }
+}
+
+/// Builds the shared file from metadata queried asynchronously through GIO.
+fn shared_file_from_info(
+    file: &gio::File,
+    info: &gio::FileInfo,
+) -> Result<SharedFile, FileRejection> {
+    match info.file_type() {
+        gio::FileType::Regular => {}
+        gio::FileType::Directory => return Err(FileRejection::Directory),
+        _ => return Err(FileRejection::NotRegularFile),
+    }
+    let path = file.path().ok_or(FileRejection::NoLocalPath)?;
+    let size = u64::try_from(info.size()).map_err(|_| FileRejection::InvalidSize)?;
+    Ok(SharedFile::new(
+        FileId::new_random(),
+        info.display_name().to_string(),
+        path,
+        size,
+    ))
 }
 
 /// Formats a transfer progress string from a translated template with named placeholders.
@@ -743,6 +845,97 @@ pub fn format_transfer_status(template: &str, streamed: &str, total: &str, perce
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::time::{Duration, Instant};
+
+    fn pump_until(
+        ctx: &glib::MainContext,
+        timeout: Duration,
+        mut done: impl FnMut() -> bool,
+    ) -> bool {
+        let deadline = Instant::now() + timeout;
+        while Instant::now() < deadline {
+            while ctx.iteration(false) {}
+            if done() {
+                return true;
+            }
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        false
+    }
+
+    fn http_status(runtime: &tokio::runtime::Runtime, url: &str) -> Option<String> {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let rest = url.strip_prefix("http://")?;
+        let (authority, path) = rest.split_at(rest.find('/')?);
+        runtime.block_on(async {
+            let mut stream = tokio::net::TcpStream::connect(authority).await.ok()?;
+            let request =
+                format!("GET {path} HTTP/1.1\r\nHost: {authority}\r\nConnection: close\r\n\r\n");
+            stream.write_all(request.as_bytes()).await.ok()?;
+            let mut head = [0u8; 12];
+            stream.read_exact(&mut head).await.ok()?;
+            Some(String::from_utf8_lossy(&head).into_owned())
+        })
+    }
+
+    /// Drives the real window: start, refuse a concurrent start, serve, stop, and
+    /// stop while starting.
+    #[test]
+    #[ignore = "requires a graphical session and a LAN address"]
+    fn test_window_share_lifecycle() {
+        adw::init().expect("initialize Libadwaita");
+        let app = adw::Application::builder()
+            .application_id("io.github.dragonGR.Dropzone.LifecycleTest")
+            .flags(gio::ApplicationFlags::NON_UNIQUE)
+            .build();
+        app.register(gio::Cancellable::NONE)
+            .expect("register application");
+        let runtime = tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(2)
+            .enable_all()
+            .build()
+            .expect("build runtime");
+        let ctx = glib::MainContext::default();
+
+        let path = std::env::temp_dir().join("dropzone_window_lifecycle.txt");
+        std::fs::write(&path, b"window lifecycle").expect("write file");
+        let window = DropzoneWindow::new(&app, runtime.handle().clone());
+
+        assert!(window.start_sharing(gio::File::for_path(&path)));
+        assert!(
+            !window.start_sharing(gio::File::for_path(&path)),
+            "a second start while starting must be refused"
+        );
+        assert!(!window.choose_button.is_sensitive());
+
+        assert!(pump_until(&ctx, Duration::from_secs(5), || !window
+            .url_entry
+            .text()
+            .is_empty()));
+        let url = window.url_entry.text().to_string();
+        assert_eq!(http_status(&runtime, &url).as_deref(), Some("HTTP/1.1 200"));
+
+        window.stop_sharing();
+        assert!(window.share.borrow().is_idle());
+        assert!(window.choose_button.is_sensitive());
+        let refused = pump_until(&ctx, Duration::from_secs(2), || {
+            http_status(&runtime, &url).is_none()
+        });
+        assert!(refused, "the stopped share's URL must stop working");
+
+        // Stop while the server is still starting: the late server must not take over the window.
+        assert!(window.start_sharing(gio::File::for_path(&path)));
+        window.stop_sharing();
+        pump_until(&ctx, Duration::from_millis(500), || false);
+        assert!(window.share.borrow().is_idle());
+        assert!(window.url_entry.text().is_empty());
+        assert_eq!(
+            window.view_stack.visible_child_name().as_deref(),
+            Some("idle")
+        );
+
+        let _ = std::fs::remove_file(path);
+    }
 
     #[test]
     fn test_format_transfer_status_reordering_and_placeholders() {
@@ -764,6 +957,63 @@ mod tests {
         assert_eq!(
             format_transfer_status(template_no_percent, "10 MB", "100 MB", 10),
             "10 MB / 100 MB"
+        );
+    }
+
+    fn file_info(file_type: gio::FileType, size: i64) -> gio::FileInfo {
+        let info = gio::FileInfo::new();
+        info.set_file_type(file_type);
+        info.set_size(size);
+        info.set_display_name("Holiday Photo.jpg");
+        info
+    }
+
+    #[test]
+    fn test_regular_file_is_accepted_with_display_name_and_size() {
+        let file = gio::File::for_path("/run/user/1000/doc/1a2b3c/Holiday Photo.jpg");
+        let shared = shared_file_from_info(&file, &file_info(gio::FileType::Regular, 4096))
+            .expect("regular file");
+        assert_eq!(shared.name(), "Holiday Photo.jpg");
+        assert_eq!(shared.size_bytes(), 4096);
+        assert_eq!(
+            shared.path(),
+            std::path::Path::new("/run/user/1000/doc/1a2b3c/Holiday Photo.jpg")
+        );
+    }
+
+    #[test]
+    fn test_directory_is_rejected() {
+        let file = gio::File::for_path("/home/user/Pictures");
+        assert_eq!(
+            shared_file_from_info(&file, &file_info(gio::FileType::Directory, 0)),
+            Err(FileRejection::Directory)
+        );
+    }
+
+    #[test]
+    fn test_special_file_is_rejected() {
+        let file = gio::File::for_path("/tmp/fifo");
+        assert_eq!(
+            shared_file_from_info(&file, &file_info(gio::FileType::Special, 0)),
+            Err(FileRejection::NotRegularFile)
+        );
+    }
+
+    #[test]
+    fn test_file_without_local_path_is_rejected() {
+        let file = gio::File::for_uri("http://example.com/file.bin");
+        assert_eq!(
+            shared_file_from_info(&file, &file_info(gio::FileType::Regular, 1)),
+            Err(FileRejection::NoLocalPath)
+        );
+    }
+
+    #[test]
+    fn test_negative_size_is_rejected() {
+        let file = gio::File::for_path("/tmp/file.bin");
+        assert_eq!(
+            shared_file_from_info(&file, &file_info(gio::FileType::Regular, -1)),
+            Err(FileRejection::InvalidSize)
         );
     }
 }

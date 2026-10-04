@@ -6,6 +6,8 @@ use gtk4::glib;
 use gtk4::prelude::*;
 use libadwaita as adw;
 use libadwaita::prelude::*;
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::sync::Arc;
 
 pub struct DropzoneApplication {
@@ -109,12 +111,27 @@ impl DropzoneApplication {
     }
 
     pub fn run(&self) -> glib::ExitCode {
-        let app = self.app.clone();
         let tokio_handle = self.tokio_runtime.handle().clone();
+        // The only strong reference to the window controller; its signal handlers
+        // hold weak ones.
+        let main_window: Rc<RefCell<Option<Rc<DropzoneWindow>>>> = Rc::default();
 
-        app.connect_activate(move |application| {
+        self.app.connect_activate(move |application| {
+            if let Some(window) = main_window.borrow().as_ref() {
+                window.present();
+                return;
+            }
+
             let window = DropzoneWindow::new(application, tokio_handle.clone());
+            let slot = Rc::downgrade(&main_window);
+            window.connect_closed(move || {
+                if let Some(slot) = slot.upgrade() {
+                    let closed = slot.borrow_mut().take();
+                    drop(closed);
+                }
+            });
             window.present();
+            *main_window.borrow_mut() = Some(window);
         });
 
         self.app.run()

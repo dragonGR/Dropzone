@@ -5,4 +5,5 @@ pub mod network;
 pub mod qr;
 pub mod server;
 pub mod share;
+pub mod transfer_feed;
 pub mod window;
