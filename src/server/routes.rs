@@ -22,6 +22,9 @@ const INDEX_HTML_TEMPLATE: &str = include_str!("../../web/index.html");
 const STYLE_CSS: &str = include_str!("../../web/style.css");
 const ICON_SVG: &str =
     include_str!("../../data/icons/hicolor/scalable/apps/io.github.dragonGR.Dropzone.svg");
+/// Bytes read from disk per chunk. Each read of a `tokio::fs::File` is a round trip
+/// to the blocking thread pool, so small reads cost far more CPU per byte sent.
+const DOWNLOAD_CHUNK_SIZE: usize = 64 * 1024;
 
 /// Handler for the landing page: GET /s/{token}
 async fn landing_page(
@@ -116,7 +119,7 @@ async fn download_file(
         state.progress_tx.clone(),
         state.cancel_token.clone(),
     );
-    let stream = ReaderStream::new(progress_reader);
+    let stream = ReaderStream::with_capacity(progress_reader, DOWNLOAD_CHUNK_SIZE);
     let body = axum::body::Body::from_stream(stream);
 
     Response::builder()
