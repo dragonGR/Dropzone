@@ -39,6 +39,19 @@
   </branding>
   <content_rating type="oars-1.1" />
   <releases>
+    <release version="1.2.0" date="2026-10-05">
+      <description>
+        <p>This release makes sharing more reliable and adds an Italian translation.</p>
+        <ul>
+          <li>Stopping a share now ends every download at once, including stalled ones</li>
+          <li>Connections that never send a request are closed, and the number of open connections is limited</li>
+          <li>Opening Dropzone again shows the existing window instead of a second one</li>
+          <li>File details are read without freezing the window</li>
+          <li>Downloads use much less CPU</li>
+          <li>Italian translation by Albano Battistella</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.1.0" date="2026-09-05">
       <description>
         <p>This release introduces live transfer progress tracking and session cancellation improvements:</p>

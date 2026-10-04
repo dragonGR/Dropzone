@@ -8,7 +8,7 @@ A GNOME application for quick, temporary file sharing over your local network.
 
 </div>
 
-Select a file, and Dropzone starts an ephemeral HTTP server on your machine, generates a single-use capability URL, and presents a local vector QR code. Any device on the same local network (phone, tablet, or another computer) can scan the code and download the file directly in a web browser. The receiving device needs no client app, account, or internet connection.
+Select a file, and Dropzone starts an ephemeral HTTP server on your machine, generates a random link that works until you stop sharing, and presents a local vector QR code. Any device on the same local network (phone, tablet, or another computer) can scan the code and download the file directly in a web browser. The receiving device needs no client app, account, or internet connection.
 
 Once sharing is stopped, the server shuts down and the link is immediately invalidated.
 
