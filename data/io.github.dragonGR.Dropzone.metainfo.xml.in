@@ -4,7 +4,7 @@
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
   <name>Dropzone</name>
-  <summary>Temporary file sharing over the local network</summary>
+  <summary>Share files on your network</summary>
   <description>
     <p>
       Dropzone is a GNOME application for fast, temporary file sharing over the local network.
@@ -34,8 +34,8 @@
     <name>dragonGR</name>
   </developer>
   <branding>
-    <color type="primary" scheme_preference="light">#3584e4</color>
-    <color type="primary" scheme_preference="dark">#1c71d8</color>
+    <color type="primary" scheme_preference="light">#f8e45c</color>
+    <color type="primary" scheme_preference="dark">#613583</color>
   </branding>
   <content_rating type="oars-1.1" />
   <releases>
