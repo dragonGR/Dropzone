@@ -1,0 +1,195 @@
+# ITALIAN TRANSLATION.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the dropzone package.
+# ALBANO BATTISTELLA <albanobattistella@gmail.com>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: dropzone\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-09-04 13:19+0300\n"
+"PO-Revision-Date: 2026-09-06 15:19+0200\n"
+"Last-Translator: Albano Battistella <albanobattistella@gmail.com>\n"
+"Language-Team: Italian <it@li.org>\n"
+"Language: it\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: data/io.github.dragonGR.Dropzone.desktop.in:2
+#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:6 src/application.rs:86
+#: src/window.rs:182 src/window.rs:272
+msgid "Dropzone"
+msgstr "Dropzone"
+
+#: data/io.github.dragonGR.Dropzone.desktop.in:3
+msgid "Share files temporarily over the local network"
+msgstr "Condividi file temporaneamente sulla rete locale"
+
+#: data/io.github.dragonGR.Dropzone.desktop.in:9
+msgid "share;transfer;lan;local;network;qr;drop;"
+msgstr "condividi;condivisione;trasferisci;trasferimento;lan;locale;rete;qr;drop;rilascia;"
+
+#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:7 src/application.rs:91
+msgid "Temporary file sharing over the local network"
+msgstr "Condivisione temporanea di file sulla rete locale"
+
+#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:9
+msgid ""
+"Dropzone is a GNOME application for fast, temporary file sharing over the "
+"local network."
+msgstr ""
+"Dropzone è un'applicazione GNOME per la condivisione rapida e temporanea di "
+"file sulla rete locale."
+
+#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:12
+msgid ""
+"Select a file to start an ephemeral HTTP server and generate a "
+"cryptographically random capability URL with a QR code. Any device on the "
+"same local network can scan the QR code and download the file directly in a "
+"web browser without installing additional software or creating accounts."
+msgstr ""
+"Seleziona un file per avviare un server HTTP effimero e generare un URL di "
+"funzionalità crittograficamente casuale con un codice QR. Qualsiasi dispositivo "
+"sulla stessa rete locale può scansionare il codice QR e scaricare il file "
+"direttamente in un browser web senza installare software aggiuntivi o creare account."
+
+#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:15
+msgid "Stopping sharing immediately stops the server and invalidates the link."
+msgstr "Interrompendo la condivisione si arresta immediatamente il server e si invalida il link."
+
+#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:24
+msgid "dragonGR"
+msgstr "dragonGR"
+
+#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:30
+msgid ""
+"Initial release with single-file sharing, Cairo vector QR code rendering, "
+"and ephemeral HTTP streaming."
+msgstr ""
+"Rilascio iniziale con condivisione di file singoli, rendering vettoriale del "
+"codice QR tramite Cairo e streaming HTTP effimero."
+
+#: src/window.rs:48
+msgid "Appearance"
+msgstr "Aspetto"
+
+#: src/window.rs:59 src/window.rs:68
+msgid "System"
+msgstr "Sistema"
+
+#: src/window.rs:77 src/window.rs:87
+msgid "Light"
+msgstr "Chiaro"
+
+#: src/window.rs:96 src/window.rs:106
+msgid "Dark"
+msgstr "Scuro"
+
+#: src/window.rs:151
+msgid "About Dropzone"
+msgstr "Informazioni su Dropzone"
+
+#: src/window.rs:172
+msgid "Main Menu"
+msgstr "Menu principale"
+
+#: src/window.rs:183
+msgid "Drop files here"
+msgstr "Rilascia i file qui"
+
+#: src/window.rs:188
+msgid "Choose Files"
+msgstr "Scegli file"
+
+#: src/window.rs:192
+msgid "Select a file to share over the local network"
+msgstr "Seleziona un file da condividere sulla rete locale"
+
+#: src/window.rs:228
+msgid "Temporary capability URL for downloading"
+msgstr "URL di funzionalità temporaneo per il download"
+
+#: src/window.rs:233 src/window.rs:236
+msgid "Copy Link"
+msgstr "Copia link"
+
+#: src/window.rs:243
+msgid "Stop Sharing"
+msgstr "Interrompi condivisione"
+
+#: src/window.rs:246
+msgid "Stop sharing and invalidate the download link"
+msgstr "Interrompe la condivisione e invalida il link di download"
+
+#: src/window.rs:321
+msgid "A sharing session is already active. Please stop it first."
+msgstr "Una sessione di condivisione è già attiva. Interrompila prima di procedere."
+
+#: src/window.rs:340
+msgid "Directories cannot be shared directly. Please select a file."
+msgstr "Le cartelle non possono essere condivise direttamente. Seleziona un file."
+
+#: src/window.rs:387
+msgid "Link copied to clipboard"
+msgstr "Link copiato negli appunti"
+
+#: src/window.rs:393
+msgid "Choose File to Share"
+msgstr "Scegli il file da condividere"
+
+#: src/window.rs:405
+msgid "File selection failed"
+msgstr "Selezione del file fallita"
+
+#: src/window.rs:416
+msgid "Couldn’t resolve selected file path"
+msgstr "Impossibile risolvere il percorso del file selezionato"
+
+#: src/window.rs:424
+msgid "Couldn’t read selected file"
+msgstr "Impossibile leggere il file selezionato"
+
+#: src/window.rs:433
+msgid "Couldn’t start sharing: No local network connection available"
+msgstr "Impossibile avviare la condivisione: nessuna connessione di rete locale disponibile"
+
+#: src/window.rs:451
+msgid "Couldn’t start local HTTP server"
+msgstr "Impossibile avviare il server HTTP locale"
+
+#: src/window.rs:454
+msgid "Server task was cancelled"
+msgstr "L'attività del server è stata annullata"
+
+#: src/window.rs:483
+msgid "Failed to render QR code"
+msgstr "Impossibile generare il codice QR"
+
+#: src/window.rs:260
+msgid "Waiting for receiver…"
+msgstr "In attesa del destinatario…"
+
+#: src/window.rs:582
+msgid "Download completed"
+msgstr "Download completato"
+
+#: src/window.rs:594
+msgid "Download cancelled"
+msgstr "Download annullato"
+
+#: src/window.rs:606
+msgid "Download failed"
+msgstr "Download fallito"
+
+#: src/window.rs:642
+msgid "{streamed} / {total} ({percent}%)"
+msgstr "{streamed} / {total} ({percent}%)"
+
+#: src/window.rs:659
+msgid "{count} download in progress"
+msgid_plural "{count} downloads in progress"
+msgstr[0] "{count} download in corso"
+msgstr[1] "{count} download in corso"
