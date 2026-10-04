@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+use dropzone::server::connections::ServerLimits;
 use dropzone::server::routes::start_server;
 use dropzone::share::files::SharedFile;
 use dropzone::share::session::ShareSession;
@@ -27,6 +28,7 @@ async fn test_server_e2e_lifecycle_and_streaming() {
     let mut handle = start_server(
         Ipv4Addr::new(127, 0, 0, 1),
         session,
+        ServerLimits::default(),
         lifecycle_tx,
         progress_tx,
     )
@@ -118,9 +120,15 @@ async fn test_server_lan_ip_download() {
     let (lifecycle_tx, _lifecycle_rx) = tokio::sync::mpsc::unbounded_channel();
     let (progress_tx, _progress_rx) = tokio::sync::mpsc::channel(64);
 
-    let mut handle = start_server(lan_ip, session, lifecycle_tx, progress_tx)
-        .await
-        .expect("start server on lan IP");
+    let mut handle = start_server(
+        lan_ip,
+        session,
+        ServerLimits::default(),
+        lifecycle_tx,
+        progress_tx,
+    )
+    .await
+    .expect("start server on lan IP");
 
     assert_eq!(handle.published_addr.ip(), std::net::IpAddr::V4(lan_ip));
 
@@ -158,6 +166,7 @@ async fn test_curl_real_download() {
     let mut handle = start_server(
         std::net::Ipv4Addr::LOCALHOST,
         session,
+        ServerLimits::default(),
         lifecycle_tx,
         progress_tx,
     )
@@ -326,6 +335,7 @@ async fn test_transfer_events_lifecycle_and_monotonic_progress() {
     let mut handle = start_server(
         Ipv4Addr::new(127, 0, 0, 1),
         session,
+        ServerLimits::default(),
         lifecycle_tx,
         progress_tx,
     )
@@ -400,6 +410,7 @@ async fn test_transfer_early_client_disconnect_emits_cancelled() {
     let mut handle = start_server(
         Ipv4Addr::new(127, 0, 0, 1),
         session,
+        ServerLimits::default(),
         lifecycle_tx,
         progress_tx,
     )
@@ -472,6 +483,7 @@ async fn test_transfer_concurrent_downloads_independent_ids() {
     let mut handle = start_server(
         Ipv4Addr::new(127, 0, 0, 1),
         session,
+        ServerLimits::default(),
         lifecycle_tx,
         progress_tx,
     )
@@ -534,6 +546,7 @@ async fn test_stop_sharing_promptly_terminates_active_download_and_invalidates_s
     let mut handle = start_server(
         Ipv4Addr::new(127, 0, 0, 1),
         session,
+        ServerLimits::default(),
         lifecycle_tx,
         progress_tx,
     )
@@ -667,6 +680,7 @@ async fn test_transfer_early_eof_truncated_file_emits_failed_and_errors() {
     let mut handle = start_server(
         Ipv4Addr::new(127, 0, 0, 1),
         session,
+        ServerLimits::default(),
         lifecycle_tx,
         progress_tx,
     )
@@ -714,4 +728,342 @@ async fn test_transfer_early_eof_truncated_file_emits_failed_and_errors() {
 
     handle.stop().await;
     let _ = tokio::fs::remove_file(file_path).await;
+}
+
+fn share_temp_file(name: &str, len: usize) -> (std::path::PathBuf, ShareSession) {
+    let file_path = std::env::temp_dir().join(name);
+    std::fs::write(&file_path, vec![0x5A; len]).expect("write test file");
+    let shared_file = SharedFile::from_path(file_path.clone()).expect("create SharedFile");
+    (file_path, ShareSession::new(shared_file))
+}
+
+/// A receiver that stops reading must not keep the transfer, the open file or the
+/// server state alive once sharing has been stopped.
+#[tokio::test]
+async fn test_stop_releases_stalled_download() {
+    use std::time::Duration;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+    let (file_path, session) = share_temp_file("dropzone_test_stalled.bin", 64 * 1024 * 1024);
+    let path = format!(
+        "/s/{}/files/{}",
+        session.token().as_str(),
+        session.file().id().as_str()
+    );
+
+    let (lifecycle_tx, mut lifecycle_rx) = tokio::sync::mpsc::unbounded_channel();
+    let (progress_tx, _progress_rx) = tokio::sync::mpsc::channel(64);
+    let mut handle = start_server(
+        Ipv4Addr::LOCALHOST,
+        session,
+        ServerLimits::default(),
+        lifecycle_tx,
+        progress_tx,
+    )
+    .await
+    .expect("start server");
+
+    let mut stalled = tokio::net::TcpStream::connect(handle.published_addr)
+        .await
+        .expect("connect");
+    stalled
+        .write_all(format!("GET {path} HTTP/1.1\r\nHost: test\r\n\r\n").as_bytes())
+        .await
+        .expect("write request");
+    let mut head = [0u8; 1024];
+    assert!(stalled.read(&mut head).await.expect("read head") > 0);
+
+    let started = lifecycle_rx.recv().await.expect("Started event");
+    assert!(matches!(started, TransferLifecycleEvent::Started { .. }));
+
+    // Let the socket buffers fill so the server can no longer write.
+    tokio::time::sleep(Duration::from_millis(300)).await;
+
+    handle.stop().await;
+    drop(handle);
+
+    let cancelled = tokio::time::timeout(Duration::from_secs(2), lifecycle_rx.recv())
+        .await
+        .expect("stalled transfer must end after stop");
+    assert!(
+        matches!(cancelled, Some(TransferLifecycleEvent::Cancelled { .. })),
+        "expected Cancelled, got {cancelled:?}"
+    );
+
+    // The channel closes only when every server-side sender is gone: the server
+    // state, the connection task and the transfer's reader.
+    let closed = tokio::time::timeout(Duration::from_secs(2), lifecycle_rx.recv())
+        .await
+        .expect("server state must be released after stop");
+    assert_eq!(closed, None);
+
+    drop(stalled);
+    let _ = std::fs::remove_file(file_path);
+}
+
+#[tokio::test]
+async fn test_incomplete_request_head_is_closed_after_timeout() {
+    use std::time::Duration;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+    let (file_path, session) = share_temp_file("dropzone_test_head_timeout.bin", 16);
+    let (lifecycle_tx, _lifecycle_rx) = tokio::sync::mpsc::unbounded_channel();
+    let (progress_tx, _progress_rx) = tokio::sync::mpsc::channel(64);
+    let limits = ServerLimits {
+        header_read_timeout: Duration::from_millis(200),
+        ..ServerLimits::default()
+    };
+    let mut handle = start_server(
+        Ipv4Addr::LOCALHOST,
+        session,
+        limits,
+        lifecycle_tx,
+        progress_tx,
+    )
+    .await
+    .expect("start server");
+
+    let mut slow = tokio::net::TcpStream::connect(handle.published_addr)
+        .await
+        .expect("connect");
+    slow.write_all(b"GET /s/ HTTP/1.1\r\nHost: te")
+        .await
+        .expect("write partial head");
+
+    let mut buf = [0u8; 256];
+    let read = tokio::time::timeout(Duration::from_secs(2), async {
+        loop {
+            match slow.read(&mut buf).await {
+                Ok(0) | Err(_) => break,
+                Ok(_) => {}
+            }
+        }
+    })
+    .await;
+    assert!(
+        read.is_ok(),
+        "server must close a connection that never completes its request head"
+    );
+
+    handle.stop().await;
+    let _ = std::fs::remove_file(file_path);
+}
+
+#[tokio::test]
+async fn test_idle_keep_alive_connection_is_closed_after_timeout() {
+    use std::time::Duration;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+    let (file_path, session) = share_temp_file("dropzone_test_idle_keepalive.bin", 16);
+    let (lifecycle_tx, _lifecycle_rx) = tokio::sync::mpsc::unbounded_channel();
+    let (progress_tx, _progress_rx) = tokio::sync::mpsc::channel(64);
+    let limits = ServerLimits {
+        header_read_timeout: Duration::from_millis(200),
+        ..ServerLimits::default()
+    };
+    let mut handle = start_server(
+        Ipv4Addr::LOCALHOST,
+        session,
+        limits,
+        lifecycle_tx,
+        progress_tx,
+    )
+    .await
+    .expect("start server");
+
+    let mut idle = tokio::net::TcpStream::connect(handle.published_addr)
+        .await
+        .expect("connect");
+    idle.write_all(b"GET /unknown HTTP/1.1\r\nHost: test\r\n\r\n")
+        .await
+        .expect("write request");
+    let mut buf = [0u8; 512];
+    let n = idle.read(&mut buf).await.expect("read response");
+    assert!(String::from_utf8_lossy(&buf[..n]).starts_with("HTTP/1.1 404"));
+
+    let closed = tokio::time::timeout(Duration::from_secs(2), idle.read(&mut buf)).await;
+    assert!(
+        matches!(closed, Ok(Ok(0)) | Ok(Err(_))),
+        "server must close an idle keep-alive connection, got {closed:?}"
+    );
+
+    handle.stop().await;
+    let _ = std::fs::remove_file(file_path);
+}
+
+#[tokio::test]
+async fn test_connections_beyond_limit_wait_for_a_free_slot() {
+    use std::time::Duration;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+    let (file_path, session) = share_temp_file("dropzone_test_conn_limit.bin", 16);
+    let landing = format!("/s/{}/", session.token().as_str());
+    let (lifecycle_tx, _lifecycle_rx) = tokio::sync::mpsc::unbounded_channel();
+    let (progress_tx, _progress_rx) = tokio::sync::mpsc::channel(64);
+    let limits = ServerLimits {
+        max_connections: 1,
+        ..ServerLimits::default()
+    };
+    let mut handle = start_server(
+        Ipv4Addr::LOCALHOST,
+        session,
+        limits,
+        lifecycle_tx,
+        progress_tx,
+    )
+    .await
+    .expect("start server");
+
+    let holder = tokio::net::TcpStream::connect(handle.published_addr)
+        .await
+        .expect("connect holder");
+    tokio::time::sleep(Duration::from_millis(100)).await;
+
+    let mut waiting = tokio::net::TcpStream::connect(handle.published_addr)
+        .await
+        .expect("connect waiting client");
+    waiting
+        .write_all(
+            format!("GET {landing} HTTP/1.1\r\nHost: test\r\nConnection: close\r\n\r\n").as_bytes(),
+        )
+        .await
+        .expect("write request");
+
+    let mut buf = [0u8; 512];
+    let early = tokio::time::timeout(Duration::from_millis(300), waiting.read(&mut buf)).await;
+    assert!(
+        early.is_err(),
+        "a connection over the limit must not be served, got {early:?}"
+    );
+
+    drop(holder);
+    let n = tokio::time::timeout(Duration::from_secs(2), waiting.read(&mut buf))
+        .await
+        .expect("waiting client must be served once a slot frees up")
+        .expect("read response");
+    assert!(String::from_utf8_lossy(&buf[..n]).starts_with("HTTP/1.1 200"));
+
+    handle.stop().await;
+    let _ = std::fs::remove_file(file_path);
+}
+
+/// The header read timeout covers waiting for a request head, never the time spent
+/// streaming a response to a slow receiver.
+#[tokio::test]
+async fn test_slow_download_outlives_header_read_timeout() {
+    use std::time::Duration;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+    // Far larger than the loopback socket buffers, so the server is still writing
+    // when the receiver resumes.
+    let total = 32 * 1024 * 1024;
+    let (file_path, session) = share_temp_file("dropzone_test_slow_download.bin", total);
+    let path = format!(
+        "/s/{}/files/{}",
+        session.token().as_str(),
+        session.file().id().as_str()
+    );
+    let (lifecycle_tx, _lifecycle_rx) = tokio::sync::mpsc::unbounded_channel();
+    let (progress_tx, _progress_rx) = tokio::sync::mpsc::channel(64);
+    let limits = ServerLimits {
+        header_read_timeout: Duration::from_millis(100),
+        ..ServerLimits::default()
+    };
+    let mut handle = start_server(
+        Ipv4Addr::LOCALHOST,
+        session,
+        limits,
+        lifecycle_tx,
+        progress_tx,
+    )
+    .await
+    .expect("start server");
+
+    let mut stream = tokio::net::TcpStream::connect(handle.published_addr)
+        .await
+        .expect("connect");
+    stream
+        .write_all(
+            format!("GET {path} HTTP/1.1\r\nHost: test\r\nConnection: close\r\n\r\n").as_bytes(),
+        )
+        .await
+        .expect("write request");
+
+    let mut received = Vec::with_capacity(total + 1024);
+    let mut chunk = [0u8; 64 * 1024];
+    let n = stream.read(&mut chunk).await.expect("read head");
+    received.extend_from_slice(&chunk[..n]);
+
+    tokio::time::sleep(Duration::from_millis(500)).await;
+
+    loop {
+        match stream.read(&mut chunk).await.expect("read body") {
+            0 => break,
+            n => received.extend_from_slice(&chunk[..n]),
+        }
+    }
+
+    let body_start = received
+        .windows(4)
+        .position(|w| w == b"\r\n\r\n")
+        .expect("response head")
+        + 4;
+    assert_eq!(received.len() - body_start, total);
+
+    handle.stop().await;
+    let _ = std::fs::remove_file(file_path);
+}
+
+/// Dropping the handle without calling `stop` must still tear down every connection.
+#[tokio::test]
+async fn test_dropping_handle_releases_stalled_download() {
+    use std::time::Duration;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+    let (file_path, session) =
+        share_temp_file("dropzone_test_dropped_handle.bin", 64 * 1024 * 1024);
+    let path = format!(
+        "/s/{}/files/{}",
+        session.token().as_str(),
+        session.file().id().as_str()
+    );
+    let (lifecycle_tx, mut lifecycle_rx) = tokio::sync::mpsc::unbounded_channel();
+    let (progress_tx, _progress_rx) = tokio::sync::mpsc::channel(64);
+    let handle = start_server(
+        Ipv4Addr::LOCALHOST,
+        session,
+        ServerLimits::default(),
+        lifecycle_tx,
+        progress_tx,
+    )
+    .await
+    .expect("start server");
+
+    let mut stalled = tokio::net::TcpStream::connect(handle.published_addr)
+        .await
+        .expect("connect");
+    stalled
+        .write_all(format!("GET {path} HTTP/1.1\r\nHost: test\r\n\r\n").as_bytes())
+        .await
+        .expect("write request");
+    let mut head = [0u8; 1024];
+    assert!(stalled.read(&mut head).await.expect("read head") > 0);
+    assert!(matches!(
+        lifecycle_rx.recv().await,
+        Some(TransferLifecycleEvent::Started { .. })
+    ));
+
+    drop(handle);
+
+    let closed = tokio::time::timeout(Duration::from_secs(2), async {
+        while lifecycle_rx.recv().await.is_some() {}
+    })
+    .await;
+    assert!(
+        closed.is_ok(),
+        "server state must be released after the handle is dropped"
+    );
+
+    drop(stalled);
+    let _ = std::fs::remove_file(file_path);
 }

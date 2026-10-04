@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+pub mod connections;
 pub mod download;
 pub mod progress_stream;
 pub mod routes;

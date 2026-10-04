@@ -2,6 +2,7 @@
 
 use crate::network::interfaces::find_local_lan_ip;
 use crate::qr::create_qr_widget;
+use crate::server::connections::ServerLimits;
 use crate::server::routes::start_server;
 use crate::server::state::ServerHandle;
 use crate::share::files::{SharedFile, format_file_size};
@@ -519,7 +520,14 @@ impl DropzoneWindow {
         });
 
         self.tokio_handle.spawn(async move {
-            let result = start_server(lan_ip, session, lifecycle_tx, progress_tx).await;
+            let result = start_server(
+                lan_ip,
+                session,
+                ServerLimits::default(),
+                lifecycle_tx,
+                progress_tx,
+            )
+            .await;
             let _ = sender.send(result.map_err(|e| e.to_string()));
         });
     }

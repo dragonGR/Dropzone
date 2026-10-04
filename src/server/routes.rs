@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+use crate::server::connections::{self, ServerLimits};
 use crate::server::download::{escape_html, format_content_disposition, guess_mime_type};
 use crate::server::progress_stream::ProgressReader;
 use crate::server::state::{ServerHandle, ServerState};
@@ -14,7 +15,7 @@ use std::io;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::sync::Arc;
 use tokio::net::TcpListener;
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::mpsc;
 use tokio_util::io::ReaderStream;
 
 const INDEX_HTML_TEMPLATE: &str = include_str!("../../web/index.html");
@@ -144,6 +145,7 @@ pub fn build_router(state: Arc<ServerState>) -> Router {
 pub async fn start_server(
     lan_ip: Ipv4Addr,
     session: ShareSession,
+    limits: ServerLimits,
     lifecycle_tx: mpsc::UnboundedSender<TransferLifecycleEvent>,
     progress_tx: mpsc::Sender<TransferProgressEvent>,
 ) -> io::Result<ServerHandle> {
@@ -157,21 +159,17 @@ pub async fn start_server(
     let state = Arc::new(ServerState::new(session, lifecycle_tx, progress_tx));
     let router = build_router(Arc::clone(&state));
 
-    let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
-
-    let server = axum::serve(listener, router).with_graceful_shutdown(async move {
-        let _ = shutdown_rx.await;
-    });
-
-    let join_handle = tokio::spawn(async move {
-        let _ = server.await;
-    });
+    let serve_task = tokio::spawn(connections::serve(
+        listener,
+        router,
+        limits,
+        state.cancel_token.clone(),
+    ));
 
     Ok(ServerHandle::new(
         bound_addr,
         published_addr,
         state,
-        shutdown_tx,
-        join_handle,
+        serve_task,
     ))
 }
