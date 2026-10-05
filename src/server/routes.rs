@@ -1,14 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use crate::server::connections::{self, ServerLimits};
-use crate::server::download::{escape_html, format_content_disposition, guess_mime_type};
+use crate::server::download::{format_content_disposition, guess_mime_type};
+use crate::server::page::render_landing_page;
 use crate::server::progress_stream::ProgressReader;
 use crate::server::state::{ServerHandle, ServerState};
 use crate::share::session::ShareSession;
 use crate::share::transfer::{TransferLifecycleEvent, TransferProgressEvent};
 use axum::Router;
 use axum::extract::{Path, State};
-use axum::http::{StatusCode, header};
+use axum::http::{HeaderValue, StatusCode, header};
+use axum::middleware::map_response;
 use axum::response::{Html, IntoResponse, Response};
 use axum::routing::get;
 use std::io;
@@ -18,7 +20,6 @@ use tokio::net::TcpListener;
 use tokio::sync::mpsc;
 use tokio_util::io::ReaderStream;
 
-const INDEX_HTML_TEMPLATE: &str = include_str!("../../web/index.html");
 const STYLE_CSS: &str = include_str!("../../web/style.css");
 const ICON_SVG: &str =
     include_str!("../../data/icons/hicolor/scalable/apps/io.github.dragonGR.Dropzone.svg");
@@ -37,18 +38,7 @@ async fn landing_page(
         _ => return StatusCode::NOT_FOUND.into_response(),
     };
 
-    let file = session.file();
-    let escaped_name = escape_html(file.name());
-    let escaped_size = escape_html(&file.formatted_size());
-    let download_url = format!("/s/{}/files/{}", token, file.id().as_str());
-
-    let rendered = INDEX_HTML_TEMPLATE
-        .replace("{{FILE_NAME}}", &escaped_name)
-        .replace("{{FILE_SIZE}}", &escaped_size)
-        .replace("{{DOWNLOAD_URL}}", &download_url)
-        .replace("{{TOKEN}}", &token);
-
-    Html(rendered).into_response()
+    Html(render_landing_page(session.file(), &token)).into_response()
 }
 
 /// Handler for the CSS stylesheet: GET /s/{token}/style.css
@@ -131,6 +121,34 @@ async fn download_file(
         .unwrap_or_else(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())
 }
 
+/// Allows only the page's own stylesheet and icon, and no scripts, frames or forms.
+const CONTENT_SECURITY_POLICY: &str = "default-src 'none'; style-src 'self'; img-src 'self'; \
+     base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
+
+/// Adds the headers every response carries. The URL is a bearer capability, so
+/// nothing is cached or sent on as a referrer.
+async fn add_security_headers(mut response: Response) -> Response {
+    let headers = response.headers_mut();
+    headers.insert(
+        header::X_CONTENT_TYPE_OPTIONS,
+        HeaderValue::from_static("nosniff"),
+    );
+    headers.insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
+    headers.insert(
+        header::REFERRER_POLICY,
+        HeaderValue::from_static("no-referrer"),
+    );
+    headers.insert(
+        header::CONTENT_SECURITY_POLICY,
+        HeaderValue::from_static(CONTENT_SECURITY_POLICY),
+    );
+    response
+}
+
+async fn not_found() -> StatusCode {
+    StatusCode::NOT_FOUND
+}
+
 /// Constructs the Axum application router with all routes bound to the state.
 pub fn build_router(state: Arc<ServerState>) -> Router {
     Router::new()
@@ -141,6 +159,9 @@ pub fn build_router(state: Arc<ServerState>) -> Router {
         .route("/s/{token}/favicon.ico", get(favicon))
         .route("/s/{token}/files/{file_id}", get(download_file))
         .route("/s/{token}/files/{file_id}/", get(download_file))
+        .fallback(not_found)
+        // Added after the routes and fallback so that it covers all of them.
+        .layer(map_response(add_security_headers))
         .with_state(state)
 }
 

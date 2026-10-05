@@ -3,12 +3,13 @@
 # This file is distributed under the same license as the dropzone package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 #
+#: src/server/page.rs:47
 #, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: dropzone\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-05 02:07+0300\n"
+"POT-Creation-Date: 2026-10-05 10:52+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -19,7 +20,7 @@ msgstr ""
 "Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
 
 #: data/io.github.dragonGR.Dropzone.desktop.in:2
-#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:6 src/application.rs:88
+#: data/io.github.dragonGR.Dropzone.metainfo.xml.in:6 src/application.rs:78
 #: src/window.rs:206 src/window.rs:327
 msgid "Dropzone"
 msgstr ""
@@ -146,7 +147,7 @@ msgid ""
 "and ephemeral HTTP streaming."
 msgstr ""
 
-#: src/application.rs:93
+#: src/application.rs:83
 msgid "Temporary file sharing over the local network"
 msgstr ""
 
@@ -272,4 +273,19 @@ msgstr ""
 
 #: src/window.rs:809
 msgid "Couldn’t read selected file"
+msgstr ""
+
+#. Translators: accessible name of the web page that receiving devices open
+#: src/server/page.rs:41
+msgid "Shared file"
+msgstr ""
+
+#. Translators: accessible name of the file size on the receiving device's web page
+#: src/server/page.rs:43
+msgid "File size"
+msgstr ""
+
+#. Translators: button on the web page that receiving devices open
+#: src/server/page.rs:45
+msgid "Download"
 msgstr ""

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{LANG}}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="/s/{{TOKEN}}/style.css">
 </head>
 <body>
-  <main class="card" role="region" aria-label="Shared File Download">
+  <main class="card" role="region" aria-label="{{REGION_LABEL}}">
     <header class="card-header">
       <h1 class="brand-title">Dropzone</h1>
     </header>
@@ -23,12 +23,12 @@
         </svg>
       </div>
       <h2 class="filename" id="file-name">{{FILE_NAME}}</h2>
-      <p class="filesize" aria-label="File size">{{FILE_SIZE}}</p>
+      <p class="filesize" aria-label="{{SIZE_LABEL}}">{{FILE_SIZE}}</p>
     </section>
 
     <div class="action-container">
       <a href="{{DOWNLOAD_URL}}" id="download-btn" class="download-button" aria-describedby="file-name">
-        Download
+        {{DOWNLOAD_LABEL}}
       </a>
     </div>
   </main>

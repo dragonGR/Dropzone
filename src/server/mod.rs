@@ -2,6 +2,7 @@
 
 pub mod connections;
 pub mod download;
+pub mod page;
 pub mod progress_stream;
 pub mod routes;
 pub mod state;

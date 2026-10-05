@@ -1067,3 +1067,101 @@ async fn test_dropping_handle_releases_stalled_download() {
     drop(stalled);
     let _ = std::fs::remove_file(file_path);
 }
+
+async fn raw_request(addr: std::net::SocketAddr, request: &str) -> String {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    let mut stream = tokio::net::TcpStream::connect(addr).await.expect("connect");
+    stream.write_all(request.as_bytes()).await.expect("write");
+    let mut response = Vec::new();
+    stream.read_to_end(&mut response).await.expect("read");
+    String::from_utf8_lossy(&response).into_owned()
+}
+
+#[tokio::test]
+async fn test_every_response_carries_security_headers() {
+    let (file_path, session) = share_temp_file("dropzone_test_headers.bin", 64);
+    let token = session.token().as_str().to_string();
+    let file_id = session.file().id().as_str().to_string();
+    let (lifecycle_tx, _lifecycle_rx) = tokio::sync::mpsc::unbounded_channel();
+    let (progress_tx, _progress_rx) = tokio::sync::mpsc::channel(64);
+    let mut handle = start_server(
+        Ipv4Addr::LOCALHOST,
+        session,
+        ServerLimits::default(),
+        lifecycle_tx,
+        progress_tx,
+    )
+    .await
+    .expect("start server");
+
+    let requests = [
+        format!("GET /s/{token}/ HTTP/1.1"),
+        format!("GET /s/{token}/style.css HTTP/1.1"),
+        format!("GET /s/{token}/icon.svg HTTP/1.1"),
+        format!("GET /s/{token}/files/{file_id} HTTP/1.1"),
+        format!("GET /s/{} HTTP/1.1", "0".repeat(64)),
+        "GET /no/such/path HTTP/1.1".to_string(),
+        format!("POST /s/{token}/ HTTP/1.1"),
+    ];
+    for request in requests {
+        let response = raw_request(
+            handle.published_addr,
+            &format!("{request}\r\nHost: test\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"),
+        )
+        .await;
+        let head = response
+            .split("\r\n\r\n")
+            .next()
+            .unwrap_or_default()
+            .to_ascii_lowercase();
+        for expected in [
+            "x-content-type-options: nosniff",
+            "cache-control: no-store",
+            "referrer-policy: no-referrer",
+            "content-security-policy: default-src 'none'",
+        ] {
+            assert!(
+                head.contains(expected),
+                "{request}: missing `{expected}` in\n{head}"
+            );
+        }
+    }
+
+    handle.stop().await;
+    let _ = std::fs::remove_file(file_path);
+}
+
+#[tokio::test]
+async fn test_placeholders_in_file_names_are_not_expanded() {
+    let (file_path, session) = share_temp_file("dropzone {{TOKEN}} {{DOWNLOAD_URL}}.txt", 8);
+    let token = session.token().as_str().to_string();
+    let (lifecycle_tx, _lifecycle_rx) = tokio::sync::mpsc::unbounded_channel();
+    let (progress_tx, _progress_rx) = tokio::sync::mpsc::channel(64);
+    let mut handle = start_server(
+        Ipv4Addr::LOCALHOST,
+        session,
+        ServerLimits::default(),
+        lifecycle_tx,
+        progress_tx,
+    )
+    .await
+    .expect("start server");
+
+    let response = raw_request(
+        handle.published_addr,
+        &format!("GET /s/{token}/ HTTP/1.1\r\nHost: test\r\nConnection: close\r\n\r\n"),
+    )
+    .await;
+    assert!(
+        response.contains("dropzone {{TOKEN}} {{DOWNLOAD_URL}}.txt"),
+        "the file name must appear literally"
+    );
+    assert_eq!(
+        response.matches(token.as_str()).count(),
+        3,
+        "the token may appear only in the icon, stylesheet and download links"
+    );
+
+    handle.stop().await;
+    let _ = std::fs::remove_file(file_path);
+}

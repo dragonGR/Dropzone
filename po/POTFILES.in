@@ -2,3 +2,4 @@ data/io.github.dragonGR.Dropzone.desktop.in
 data/io.github.dragonGR.Dropzone.metainfo.xml.in
 src/application.rs
 src/window.rs
+src/server/page.rs
