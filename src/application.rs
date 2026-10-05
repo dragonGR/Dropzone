@@ -7,6 +7,8 @@ use gtk4::prelude::*;
 use libadwaita as adw;
 use libadwaita::prelude::*;
 use std::cell::RefCell;
+use std::ffi::OsString;
+use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::Arc;
 
@@ -21,30 +23,18 @@ impl DropzoneApplication {
         unsafe {
             gettextrs::setlocale(gettextrs::LocaleCategory::LcAll, "");
         }
-        let locale_dir = std::env::var("LOCALEDIR").unwrap_or_else(|_| {
-            let candidates = [
-                format!("{}/build/po", env!("CARGO_MANIFEST_DIR")),
-                "/usr/local/share/locale".to_string(),
-                "/app/share/locale".to_string(),
-                "/usr/share/locale".to_string(),
-            ];
-            for dir in &candidates {
-                let p = std::path::Path::new(dir);
-                if p.join("el/LC_MESSAGES/dropzone.mo").exists() {
-                    return dir.clone();
-                }
-            }
-            if std::path::Path::new("/app/share/locale").exists() {
-                "/app/share/locale".to_string()
-            } else if std::path::Path::new("/usr/local/share/locale").exists() {
-                "/usr/local/share/locale".to_string()
-            } else {
-                "/usr/share/locale".to_string()
-            }
-        });
-        let _ = gettextrs::bindtextdomain("dropzone", &locale_dir);
-        let _ = gettextrs::bind_textdomain_codeset("dropzone", "UTF-8");
-        let _ = gettextrs::textdomain("dropzone");
+        let locale_dir = locale_dir(
+            std::env::var_os("DROPZONE_LOCALEDIR"),
+            option_env!("DROPZONE_LOCALEDIR"),
+        );
+        // Without translations the app still works in English, so a failure here
+        // is reported and startup continues.
+        if let Err(err) = gettextrs::bindtextdomain(GETTEXT_DOMAIN, locale_dir)
+            .and_then(|_| gettextrs::bind_textdomain_codeset(GETTEXT_DOMAIN, "UTF-8"))
+            .and_then(|_| gettextrs::textdomain(GETTEXT_DOMAIN))
+        {
+            eprintln!("Failed to set up translations: {err}");
+        }
 
         let app = adw::Application::builder()
             .application_id("io.github.dragonGR.Dropzone")
@@ -135,5 +125,64 @@ impl DropzoneApplication {
         });
 
         self.app.run()
+    }
+}
+
+const GETTEXT_DOMAIN: &str = "dropzone";
+
+/// Gettext's standard catalog directory, used when the build did not set one.
+const SYSTEM_LOCALE_DIR: &str = "/usr/share/locale";
+
+/// Picks the directory holding the compiled translations.
+///
+/// Meson sets `DROPZONE_LOCALEDIR` at build time to the install location for the
+/// configured prefix. Setting the same variable at run time overrides it, which
+/// is how a build tree's `po` directory is used during development.
+fn locale_dir(runtime_override: Option<OsString>, build_time: Option<&'static str>) -> PathBuf {
+    if let Some(dir) = runtime_override.filter(|dir| !dir.is_empty()) {
+        return PathBuf::from(dir);
+    }
+    PathBuf::from(
+        build_time
+            .filter(|dir| !dir.is_empty())
+            .unwrap_or(SYSTEM_LOCALE_DIR),
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_runtime_override_wins() {
+        assert_eq!(
+            locale_dir(Some(OsString::from("build/po")), Some("/app/share/locale")),
+            PathBuf::from("build/po")
+        );
+    }
+
+    #[test]
+    fn test_build_time_dir_is_used_without_override() {
+        assert_eq!(
+            locale_dir(None, Some("/app/share/locale")),
+            PathBuf::from("/app/share/locale")
+        );
+    }
+
+    #[test]
+    fn test_empty_values_are_ignored() {
+        assert_eq!(
+            locale_dir(Some(OsString::new()), Some("/app/share/locale")),
+            PathBuf::from("/app/share/locale")
+        );
+        assert_eq!(
+            locale_dir(Some(OsString::new()), Some("")),
+            PathBuf::from(SYSTEM_LOCALE_DIR)
+        );
+    }
+
+    #[test]
+    fn test_system_dir_is_used_when_not_built_by_meson() {
+        assert_eq!(locale_dir(None, None), PathBuf::from(SYSTEM_LOCALE_DIR));
     }
 }

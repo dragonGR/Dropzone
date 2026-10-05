@@ -14,7 +14,6 @@ conf = configuration_data()
 conf.set('APP_ID', base_id)
 conf.set('VERSION', meson.project_version())
 conf.set('GETTEXT_PACKAGE', meson.project_name())
-conf.set('LOCALEDIR', get_option('prefix') / get_option('localedir'))
 conf.set('PKGDATADIR', get_option('prefix') / get_option('datadir') / meson.project_name())
 
 dependency('gtk4', version: '>= 4.16')

@@ -59,8 +59,11 @@ Dropzone is localized using GNU gettext. Translations are stored in the `po/` di
 To run Dropzone with a specific language (for example, Greek):
 
 ```sh
-LANGUAGE=el cargo run
+ninja -C build
+LANGUAGE=el DROPZONE_LOCALEDIR=build/po cargo run
 ```
+
+Installed builds find their translations on their own; `DROPZONE_LOCALEDIR` only points an uninstalled build at the catalogs Meson compiled in `build/po`.
 
 To update the translation template (`po/dropzone.pot`) after modifying user-facing strings:
 

@@ -18,6 +18,7 @@ custom_target(
     meson.project_source_root(),
     '@OUTPUT@',
     get_option('buildtype'),
+    get_option('prefix') / get_option('localedir'),
   ],
 )
 

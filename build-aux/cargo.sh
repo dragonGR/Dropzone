@@ -5,6 +5,8 @@ MESON_BUILD_ROOT="$1"
 MESON_SOURCE_ROOT="$2"
 OUTPUT="$3"
 BUILDTYPE="$4"
+# Compiled into the binary as the default location of its translations.
+export DROPZONE_LOCALEDIR="$5"
 
 export CARGO_TARGET_DIR="$MESON_BUILD_ROOT/target"
 export CARGO_HOME="${CARGO_HOME:-$MESON_BUILD_ROOT/cargo-home}"
